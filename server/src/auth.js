@@ -1,27 +1,32 @@
 import crypto from 'node:crypto'
-import fs from 'node:fs'
-import path from 'node:path'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { db, DATA_DIR } from './db.js'
+import { queryOne } from './db.js'
 
 const TOKEN_TTL = '7d'
 
-// A JWT secret must survive restarts or every token dies on reload. Prefer the
-// env var; otherwise generate one once and keep it beside the database.
+/**
+ * The JWT secret must be stable across restarts and across serverless
+ * instances, or tokens die unpredictably. In production it is required; in
+ * development a throwaway one is generated so the app still starts.
+ */
 function resolveSecret() {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET
-  const file = path.join(DATA_DIR, '.jwt-secret')
-  if (fs.existsSync(file)) return fs.readFileSync(file, 'utf8').trim()
-  const generated = crypto.randomBytes(48).toString('hex')
-  fs.writeFileSync(file, generated, { mode: 0o600 })
-  return generated
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'JWT_SECRET must be set in production — without it every restart logs all users out.'
+    )
+  }
+
+  console.warn('JWT_SECRET is not set — generating a temporary one for this process.')
+  return crypto.randomBytes(48).toString('hex')
 }
 
 const SECRET = resolveSecret()
 
 export const hashPassword = (plain) => bcrypt.hash(plain, 10)
-export const verifyPassword = (plain, hash) => bcrypt.compare(plain, hash)
+export const verifyPassword = (plain, hash) => (hash ? bcrypt.compare(plain, hash) : Promise.resolve(false))
 
 export function signToken(user) {
   return jwt.sign({ sub: user.id, role: user.role }, SECRET, { expiresIn: TOKEN_TTL })
@@ -29,10 +34,17 @@ export function signToken(user) {
 
 export function publicUser(user) {
   if (!user) return null
-  return { id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.created_at }
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    avatarUrl: user.avatar_url || null,
+    hasPassword: Boolean(user.password_hash),
+    hasGoogle: Boolean(user.google_id),
+    createdAt: user.created_at,
+  }
 }
-
-const findUser = db.prepare('SELECT * FROM users WHERE id = ?')
 
 function readToken(req) {
   const header = req.get('authorization') || ''
@@ -41,14 +53,17 @@ function readToken(req) {
 }
 
 /** Attaches req.user when a valid token is present; never rejects. */
-export function optionalAuth(req, _res, next) {
+export async function optionalAuth(req, _res, next) {
   const token = readToken(req)
   if (!token) return next()
+
   try {
     const payload = jwt.verify(token, SECRET)
-    req.user = findUser.get(payload.sub) || undefined
+    // Re-read the user rather than trusting the token's claims, so a role
+    // change or a deleted account takes effect on the very next request.
+    req.user = (await queryOne('SELECT * FROM users WHERE id = $1', [payload.sub])) || undefined
   } catch {
-    // An expired or malformed token is treated as "not logged in".
+    // Expired or malformed tokens simply mean "not logged in".
   }
   next()
 }
@@ -69,3 +84,6 @@ export function requireRole(...roles) {
 }
 
 export const isStaff = (user) => !!user && (user.role === 'admin' || user.role === 'staff')
+
+/** Wraps an async route so a rejected promise reaches the error handler. */
+export const asyncRoute = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)

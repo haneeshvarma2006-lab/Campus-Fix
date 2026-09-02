@@ -1,8 +1,12 @@
 node_modules/
 dist/
 
-# SQLite database, WAL files, and the generated JWT secret
+# Embedded Postgres data directory (local development)
+server/.pgdata/
 server/data/
+
+# Vercel
+.vercel/
 
 # Uploaded report photos
 server/uploads/*

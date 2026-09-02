@@ -1,24 +1,24 @@
 import { z } from 'zod'
-import { removeUpload } from './upload.js'
 
 /**
  * Runs a zod schema against a request property and replaces it with the parsed
  * value, so downstream handlers always see coerced, trimmed data.
  *
- * Multer writes the upload to disk before this runs, so a rejected request has
- * to take its file back down or the directory fills with orphans.
+ * Uploads are held in memory until a request validates, so a rejected request
+ * cannot leave an orphaned file behind.
  */
 export function validate(schema, source = 'body') {
   return (req, res, next) => {
     const result = schema.safeParse(req[source])
     if (!result.success) {
-      if (req.file) removeUpload(`/uploads/${req.file.filename}`)
       const first = result.error.issues[0]
       return res.status(400).json({
         error: first?.message || 'That request was not valid.',
         field: first?.path?.join('.') || undefined,
       })
     }
+    // Express 5 exposes req.query as a getter, so parsed query params go to
+    // their own property rather than being assigned back.
     if (source === 'query') req.validatedQuery = result.data
     else req[source] = result.data
     next()
@@ -41,19 +41,21 @@ const optionalNumber = z.preprocess(
   z.number().finite().optional()
 )
 
-export const reportSchema = z.object({
-  title: z.string().trim().min(5, 'Give the report a title of at least 5 characters.').max(140),
-  description: z.string().trim().min(10, 'Describe the issue in at least 10 characters.').max(4000),
-  category: z.string().trim().min(1).max(60).default('General'),
-  location: z.string().trim().max(200).default(''),
-  latitude: optionalNumber.refine((v) => v === undefined || (v >= -90 && v <= 90), 'Latitude is out of range.'),
-  longitude: optionalNumber.refine((v) => v === undefined || (v >= -180 && v <= 180), 'Longitude is out of range.'),
-  priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
-}).refine(
-  // A pin needs both halves — one on its own is a location that can never be shown.
-  (v) => (v.latitude === undefined) === (v.longitude === undefined),
-  { message: 'A map pin needs both a latitude and a longitude.', path: ['longitude'] }
-)
+export const reportSchema = z
+  .object({
+    title: z.string().trim().min(5, 'Give the report a title of at least 5 characters.').max(140),
+    description: z.string().trim().min(10, 'Describe the issue in at least 10 characters.').max(4000),
+    category: z.string().trim().min(1).max(60).default('General'),
+    location: z.string().trim().max(200).default(''),
+    latitude: optionalNumber.refine((v) => v === undefined || (v >= -90 && v <= 90), 'Latitude is out of range.'),
+    longitude: optionalNumber.refine((v) => v === undefined || (v >= -180 && v <= 180), 'Longitude is out of range.'),
+    priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+  })
+  .refine(
+    // A pin needs both halves — one on its own is a location that can never be shown.
+    (v) => (v.latitude === undefined) === (v.longitude === undefined),
+    { message: 'A map pin needs both a latitude and a longitude.', path: ['longitude'] }
+  )
 
 export const statusSchema = z.object({
   status: z.enum(['open', 'in_progress', 'resolved', 'rejected'], {
@@ -83,7 +85,7 @@ export const listQuerySchema = z.object({
   status: z.enum(['all', 'open', 'in_progress', 'resolved', 'rejected']).default('all'),
   category: z.string().trim().default('all'),
   q: z.string().trim().max(120).default(''),
-  sort: z.enum(['newest', 'oldest', 'votes']).default('newest'),
+  sort: z.enum(['newest', 'oldest', 'votes', 'priority']).default('newest'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(12),
 })

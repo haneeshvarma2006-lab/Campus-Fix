@@ -2,10 +2,12 @@
  * Seeds a demo dataset: one admin, one staff member, three citizens, a set of
  * categories, and a spread of reports across every status.
  *
- *   npm run seed          add demo data (skips if users already exist)
+ *   npm run seed              add demo data (skips if users already exist)
  *   npm run seed -- --force   wipe everything first, then seed
  */
-import { db } from './db.js'
+import 'dotenv/config'
+import { query, transaction, closeDatabase, describeDatabase } from './db.js'
+import { migrate } from './schema.js'
 import { hashPassword } from './auth.js'
 
 const force = process.argv.includes('--force')
@@ -16,11 +18,11 @@ const CATEGORIES = [
 ]
 
 const USERS = [
-  { name: 'Admin',        email: 'admin@campusfix.app',  password: 'admin1234', role: 'admin' },
-  { name: 'Maya Iyer',    email: 'staff@campusfix.app',  password: 'staff1234', role: 'staff' },
-  { name: 'Rahul Menon',  email: 'rahul@example.com',    password: 'demo1234',  role: 'citizen' },
-  { name: 'Sara Fernandes', email: 'sara@example.com',   password: 'demo1234',  role: 'citizen' },
-  { name: 'Dev Kapoor',   email: 'dev@example.com',      password: 'demo1234',  role: 'citizen' },
+  { name: 'Admin',          email: 'admin@campusfix.app', password: 'admin1234', role: 'admin' },
+  { name: 'Maya Iyer',      email: 'staff@campusfix.app', password: 'staff1234', role: 'staff' },
+  { name: 'Rahul Menon',    email: 'rahul@example.com',   password: 'demo1234',  role: 'citizen' },
+  { name: 'Sara Fernandes', email: 'sara@example.com',    password: 'demo1234',  role: 'citizen' },
+  { name: 'Dev Kapoor',     email: 'dev@example.com',     password: 'demo1234',  role: 'citizen' },
 ]
 
 const REPORTS = [
@@ -57,104 +59,121 @@ const COMMENTS = [
   { report: 7, by: 'staff@campusfix.app', body: 'Replacement extinguisher installed and the whole floor is being audited this week.' },
 ]
 
-function iso(daysAgo, hourOffset = 0) {
-  return new Date(Date.now() - daysAgo * 86400000 + hourOffset * 3600000)
-    .toISOString().slice(0, 19).replace('T', ' ')
-}
+const ago = (days, hours = 0) => new Date(Date.now() - days * 86_400_000 + hours * 3_600_000)
 
-function randomCode(existing) {
+function makeCode(taken) {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let code
   do {
     code = Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('')
-  } while (existing.has(code))
-  existing.add(code)
+  } while (taken.has(code))
+  taken.add(code)
   return code
 }
 
 async function main() {
+  console.log(`Database: ${describeDatabase()}`)
+  await migrate()
+
   if (force) {
-    db.exec('DELETE FROM votes; DELETE FROM comments; DELETE FROM report_events; DELETE FROM reports; DELETE FROM categories; DELETE FROM users;')
-    db.exec("DELETE FROM sqlite_sequence WHERE name IN ('users','reports','categories','comments','report_events')")
+    // Truncating in one statement handles the foreign keys for us.
+    await query('TRUNCATE votes, comments, report_events, reports, categories, users RESTART IDENTITY CASCADE')
     console.log('Cleared existing data.')
   }
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n > 0) {
+  const [{ n }] = await query('SELECT COUNT(*)::int AS n FROM users')
+  if (n > 0) {
     console.log('Database already has users — nothing seeded. Use `npm run seed -- --force` to reset.')
-    process.exit(0)
+    return
   }
 
-  for (const name of CATEGORIES) {
-    db.prepare('INSERT OR IGNORE INTO categories (name) VALUES (?)').run(name)
-  }
+  // Hash outside the transaction: bcrypt is deliberately slow and there is no
+  // reason to hold a database transaction open through it.
+  const hashes = Object.fromEntries(
+    await Promise.all(USERS.map(async (u) => [u.email, await hashPassword(u.password)]))
+  )
 
-  const userIds = {}
-  for (const u of USERS) {
-    const hash = await hashPassword(u.password)
-    const { lastInsertRowid } = db
-      .prepare('INSERT INTO users (name, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)')
-      .run(u.name, u.email, hash, u.role, iso(30))
-    userIds[u.email] = Number(lastInsertRowid)
-  }
+  await transaction(async (client) => {
+    for (const name of CATEGORIES) {
+      await client.query('INSERT INTO categories (name) VALUES ($1) ON CONFLICT DO NOTHING', [name])
+    }
 
-  const citizens = ['rahul@example.com', 'sara@example.com', 'dev@example.com']
-  const codes = new Set()
-  const reportIds = []
+    const userIds = {}
+    for (const u of USERS) {
+      const [row] = await client.query(
+        `INSERT INTO users (name, email, password_hash, role, created_at)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [u.name, u.email, hashes[u.email], u.role, ago(30)]
+      )
+      userIds[u.email] = row.id
+    }
 
-  REPORTS.forEach((r, i) => {
-    const reporter = userIds[citizens[i % citizens.length]]
-    const createdAt = iso(r.days)
-    const resolvedAt = r.status === 'resolved' ? iso(Math.max(0, r.days - 2)) : null
+    const citizens = ['rahul@example.com', 'sara@example.com', 'dev@example.com']
+    const staffId = userIds['staff@campusfix.app']
+    const taken = new Set()
+    const reportIds = []
 
-    const { lastInsertRowid } = db.prepare(`
-      INSERT INTO reports
-        (code, title, description, category, location, status, priority, reporter_id, created_at, updated_at, resolved_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      randomCode(codes), r.title, r.description, r.category, r.location,
-      r.status, r.priority, reporter, createdAt,
-      resolvedAt || iso(Math.max(0, r.days - 1)), resolvedAt
-    )
+    for (const [i, r] of REPORTS.entries()) {
+      const reporter = userIds[citizens[i % citizens.length]]
+      const createdAt = ago(r.days)
+      const resolvedAt = r.status === 'resolved' ? ago(Math.max(0, r.days - 2)) : null
 
-    const id = Number(lastInsertRowid)
-    reportIds.push(id)
+      const [row] = await client.query(
+        `INSERT INTO reports
+           (code, title, description, category, location, status, priority, reporter_id,
+            created_at, updated_at, resolved_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+        [makeCode(taken), r.title, r.description, r.category, r.location, r.status, r.priority,
+         reporter, createdAt, resolvedAt || ago(Math.max(0, r.days - 1)), resolvedAt]
+      )
 
-    db.prepare(`
-      INSERT INTO report_events (report_id, actor_id, type, from_status, to_status, created_at)
-      VALUES (?, ?, 'created', NULL, 'open', ?)
-    `).run(id, reporter, createdAt)
+      const id = row.id
+      reportIds.push(id)
 
-    if (r.status !== 'open') {
-      const staff = userIds['staff@campusfix.app']
+      await client.query(
+        `INSERT INTO report_events (report_id, actor_id, type, to_status, created_at)
+         VALUES ($1, $2, 'created', 'open', $3)`,
+        [id, reporter, createdAt]
+      )
+
       if (r.status === 'resolved') {
-        db.prepare(`INSERT INTO report_events (report_id, actor_id, type, from_status, to_status, note, created_at)
-                    VALUES (?, ?, 'status', 'open', 'in_progress', ?, ?)`)
-          .run(id, staff, 'Assigned to the maintenance team.', iso(r.days, 6))
-        db.prepare(`INSERT INTO report_events (report_id, actor_id, type, from_status, to_status, note, created_at)
-                    VALUES (?, ?, 'status', 'in_progress', 'resolved', ?, ?)`)
-          .run(id, staff, 'Work completed and checked on site.', resolvedAt)
-      } else {
+        await client.query(
+          `INSERT INTO report_events (report_id, actor_id, type, from_status, to_status, note, created_at)
+           VALUES ($1,$2,'status','open','in_progress',$3,$4)`,
+          [id, staffId, 'Assigned to the maintenance team.', ago(r.days, 6)]
+        )
+        await client.query(
+          `INSERT INTO report_events (report_id, actor_id, type, from_status, to_status, note, created_at)
+           VALUES ($1,$2,'status','in_progress','resolved',$3,$4)`,
+          [id, staffId, 'Work completed and checked on site.', resolvedAt]
+        )
+      } else if (r.status !== 'open') {
         const note = r.status === 'rejected'
           ? 'Not a maintenance issue — referred to the department directly.'
           : 'Assigned to the maintenance team.'
-        db.prepare(`INSERT INTO report_events (report_id, actor_id, type, from_status, to_status, note, created_at)
-                    VALUES (?, ?, 'status', 'open', ?, ?, ?)`)
-          .run(id, staff, r.status, note, iso(Math.max(0, r.days - 1)))
+        await client.query(
+          `INSERT INTO report_events (report_id, actor_id, type, from_status, to_status, note, created_at)
+           VALUES ($1,$2,'status','open',$3,$4,$5)`,
+          [id, staffId, r.status, note, ago(Math.max(0, r.days - 1))]
+        )
+      }
+
+      // A scattering of upvotes so "most supported" has something to sort.
+      for (const voter of Object.values(userIds).slice(0, 2 + (i % 4))) {
+        await client.query(
+          'INSERT INTO votes (report_id, user_id, created_at) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING',
+          [id, voter, ago(Math.max(0, r.days - 1))]
+        )
       }
     }
 
-    // A scattering of upvotes so the "most supported" sort has something to do.
-    const voters = Object.values(userIds).slice(0, 2 + (i % 4))
-    for (const v of voters) {
-      db.prepare('INSERT OR IGNORE INTO votes (report_id, user_id, created_at) VALUES (?, ?, ?)')
-        .run(id, v, iso(Math.max(0, r.days - 1)))
+    for (const c of COMMENTS) {
+      await client.query(
+        'INSERT INTO comments (report_id, author_id, body, created_at) VALUES ($1,$2,$3,$4)',
+        [reportIds[c.report], userIds[c.by], c.body, ago(REPORTS[c.report].days, 8)]
+      )
     }
   })
-
-  for (const c of COMMENTS) {
-    db.prepare('INSERT INTO comments (report_id, author_id, body, created_at) VALUES (?, ?, ?, ?)')
-      .run(reportIds[c.report], userIds[c.by], c.body, iso(REPORTS[c.report].days, 8))
-  }
 
   console.log('\nSeeded CampusFix demo data.\n')
   console.log('  Admin    admin@campusfix.app  /  admin1234')
@@ -163,7 +182,10 @@ async function main() {
   console.log(`\n  ${REPORTS.length} reports, ${CATEGORIES.length} categories, ${USERS.length} users.\n`)
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+main()
+  .then(closeDatabase)
+  .catch(async (err) => {
+    console.error(err)
+    await closeDatabase().catch(() => {})
+    process.exit(1)
+  })
