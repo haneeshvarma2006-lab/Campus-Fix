@@ -1,15 +1,13 @@
 # CampusFix
 
-Report and track sanitation and maintenance issues — for a campus, a neighbourhood, or any
-facility. People log in, file a report with a photo and a location, and follow its status.
-Staff see everything in one queue, move reports through the workflow, and leave notes the
-reporter can read.
+Students report sanitation and maintenance issues on campus; admins work them
+through a four-stage pipeline; everyone can see exactly where a report stands.
 
-This is a **web app** with a real backend. No Firebase project, no cloud account, no API keys
-— clone it, install, seed, run.
+A **web app** — not an APK. No Firebase project, no cloud account, no API keys to
+get it running locally: clone, install, seed, run.
 
-**Stack:** React 18 + Vite (frontend) · Express + SQLite (backend) · JWT auth · bcrypt ·
-local file uploads.
+**Stack:** React 18 + Vite · Express · Postgres · JWT auth · Google Sign-In ·
+deploys to Vercel.
 
 ---
 
@@ -27,84 +25,200 @@ npm run seed
 npm run dev
 ```
 
-Then open **http://localhost:5173**.
+Open **http://localhost:5173**.
 
-`npm run dev` runs both processes: the API on port 4000 and Vite on 5173. Vite proxies
-`/api` and `/uploads` through to the API, so the browser only ever talks to one origin.
+No database to install. With no `DATABASE_URL` set, the server runs **PGlite** —
+the real Postgres engine compiled to WebAssembly — storing data in
+`server/.pgdata`. Production points at a normal Postgres; the SQL is identical.
 
 ### Demo accounts
 
-Seeding creates twelve reports across every status, eight categories, and five users:
+Seeding creates 14 reports across every stage, 8 categories, and 5 users.
+The login page has one-click buttons for these.
 
-| Role    | Email                 | Password    | Sees                                        |
-| ------- | --------------------- | ----------- | ------------------------------------------- |
-| Admin   | `admin@campusfix.app` | `admin1234` | Everything, plus categories and user roles  |
-| Staff   | `staff@campusfix.app` | `staff1234` | Every report; can set status and priority   |
-| Citizen | `rahul@example.com`   | `demo1234`  | Only their own reports                      |
+| Role | Email | Password | Sees |
+| --- | --- | --- | --- |
+| Admin | `admin@campusfix.app` | `admin1234` | Every report, all controls |
+| Student | `student.a@campus.edu` | `demo1234` | Only their own reports |
 
-The login page has one-click buttons to fill each of these in.
-
-To wipe and reseed: `npm run seed -- --force`.
+Reset at any time with `npm run seed -- --force`.
 
 ---
 
-## Production build
+## What's in it
 
-One process serves both the API and the built frontend on port 4000:
+### Student side
 
-```bash
-npm run build && npm start
+| | |
+| --- | --- |
+| **Login / Sign up** | Email + password, or Google once configured |
+| **Dashboard** | Their counts per stage, what's still open, what they filed recently, and what they report most |
+| **Report an issue** | Photo, category, location, priority, description — in three clear steps |
+| **Photo upload** | Drag-and-drop, or the phone camera straight from the form. 8 MB cap, images only |
+| **Location** | Free text plus one-tap GPS, which also stores map coordinates |
+| **Track status** | A visual tracker: Reported → Assigned → In Progress → Fixed |
+| **My reports** | Filter by any stage, paginated, deep-linkable |
+| **Discussion** | Comment thread with the admin, on each report |
+| **Backing** | Upvote reports so the ones affecting most people rise |
+
+### Admin side
+
+| | |
+| --- | --- |
+| **Dashboard** | Counts per stage, fix rate, average time to fix, oldest report still open, size of the active queue |
+| **All reported issues** | Every report from every student, in one queue |
+| **Filters** | Status, category, **location**, plus full-text search over title, description, location and reference code |
+| **Sorting** | Newest, oldest, most urgent, most backed |
+| **Change status** | Move through the pipeline with an attributed note. Rejecting requires a reason |
+| **View photos** | Full-size on the report, thumbnails in the queue |
+| **Analytics** | 14-day filing trend, breakdown by category and by location — every bar is also a filter |
+| **Settings** | Manage categories and who holds which role |
+
+---
+
+## The status pipeline
+
+```
+Reported  →  Assigned  →  In Progress  →  Fixed
+                                     ↘
+                                      Rejected
 ```
 
-Open **http://localhost:4000**. The server serves `client/dist` when it exists and falls
-back to `index.html` for client-side routes, so deep links like `/admin/settings` work on a
-hard refresh.
+Four stages plus **Rejected**, a side exit for invalid or duplicate reports.
+Rejecting requires a written reason, so a closed report always explains itself.
+
+Every transition is written to an append-only event log with who made it, when,
+and any note — that's what the History section on each report renders. Statuses
+are enforced by a `CHECK` constraint in the database, not only in app code.
 
 ---
 
-## How roles work
+## Roles
 
-New signups are always **citizens**. Staff and admin access is granted by an existing admin
-from **Settings → People** — it is never selectable at signup, so registering does not get
-anyone near the dashboard.
+Two roles: **student** and **admin**.
 
-The one exception: on a brand-new database, **the first account to register becomes the
-admin**. Otherwise a fresh install would have no way in.
+New signups are always students. Admin is granted by an existing admin under
+**Settings → People** — never selectable at signup, so registering gets nobody
+near the dashboard.
 
-Two guards protect against locking yourself out: you cannot demote yourself, and the last
-remaining admin cannot be demoted at all.
+The one exception: on a brand-new database, **the first account to register
+becomes the admin**, because otherwise nobody could ever get in. Nothing is
+hardcoded — hand admin to anyone and remove yourself whenever you like.
 
-| | Citizen | Staff | Admin |
-| --- | :---: | :---: | :---: |
-| File reports, comment, upvote | ✓ | ✓ | ✓ |
-| See own reports | ✓ | ✓ | ✓ |
-| See **all** reports, search and filter | | ✓ | ✓ |
-| Change status and priority | | ✓ | ✓ |
-| Manage categories | | | ✓ |
-| Change user roles | | | ✓ |
-| Delete any report | own only | own only | ✓ |
+Two guards stop lockouts: you cannot demote yourself, and the last remaining
+admin cannot be demoted at all.
+
+| | Student | Admin |
+| --- | :---: | :---: |
+| File reports, comment, back | ✓ | ✓ |
+| See own reports | ✓ | ✓ |
+| See **all** reports, search and filter | | ✓ |
+| Change status and priority | | ✓ |
+| Manage categories and roles | | ✓ |
+| Delete any report | own only | ✓ |
+
+Scoping is enforced server-side on every request. A student who asks for
+`scope=all` still gets only their own reports back.
 
 ---
 
-## What is in it
+## Google Sign-In
 
-**Reporting** — title, description, category, priority, free-text location, optional GPS
-coordinates from the browser, and an optional photo (drag-and-drop or the phone camera).
-Every report gets a short quotable reference like `#7QK2FD`.
+Fully implemented and dormant until you add credentials — the button doesn't
+render at all until the server reports Google is configured, and email/password
+keeps working regardless.
 
-**Tracking** — an append-only timeline on each report showing every status and priority
-change, who made it, when, and any note they left. Comments run alongside it, between the
-reporter and the team.
+**Setting it up** (about five minutes):
 
-**Dashboard** — counts per status, resolution rate, average time to resolve, a 14-day
-trend, a category breakdown, plus search across title, description, location and reference
-code, with status/category filters, sorting, and pagination.
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/) → create a
+   project (or pick an existing one).
+2. **APIs & Services → OAuth consent screen.** Choose **External**, fill in an
+   app name, your support email, and a developer contact. Save.
+   While it's in *Testing*, add your own Google account under **Test users**.
+3. **APIs & Services → Credentials → Create credentials → OAuth client ID.**
+   Application type: **Web application**.
+4. Under **Authorised JavaScript origins**, add:
+   - `http://localhost:5173` (local dev)
+   - `https://your-app.vercel.app` (production)
+5. Under **Authorised redirect URIs**, add — these must match exactly:
+   - `http://localhost:4000/api/auth/google/callback`
+   - `https://your-app.vercel.app/api/auth/google/callback`
+6. Create. Copy the **Client ID** and **Client secret** into `server/.env`:
 
-**Support votes** — anyone can upvote a report, and staff can sort by most supported to see
-what the most people are hitting.
+   ```
+   GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=...
+   APP_ORIGIN=http://localhost:5173
+   ```
 
-**Design** — light and dark themes (follows the system by default, toggle in the header,
-choice remembered), responsive down to phone width, skeleton loading states, and toasts.
+7. Restart the server. The button appears on login and signup by itself.
+
+On Vercel, set the same three as environment variables, with `APP_ORIGIN` and
+the redirect URI pointing at your deployed domain.
+
+**How the flow works:** the browser is sent to Google, comes back to
+`/api/auth/google/callback`, and the server exchanges the code using the client
+secret (which never reaches the browser). The session token is handed back in
+the URL *fragment*, so it never lands in a server log or browser history, and
+the SPA strips it from the address bar as soon as it's read. CSRF state is a
+signed, expiring value rather than a session lookup, so it works on serverless
+where the two requests may hit different instances.
+
+If someone signs in with Google using an email that already has a password
+account, the two are linked rather than duplicated.
+
+---
+
+## Deploying to Vercel
+
+Vercel is serverless with a disposable filesystem, so it needs a hosted database
+and hosted file storage. Both have free tiers.
+
+**1. Database.** Create a free Postgres at [Neon](https://neon.tech) (or use
+Vercel's own Postgres integration). Copy the **pooled** connection string.
+
+**2. Push this repo to GitHub**, then in Vercel: **Add New → Project** and import
+it. Leave the build settings alone — `vercel.json` already declares them.
+
+**3. Environment variables** (Project → Settings → Environment Variables):
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | Your Neon pooled connection string |
+| `JWT_SECRET` | A long random string — `openssl rand -hex 48` |
+| `APP_ORIGIN` | `https://your-app.vercel.app` |
+| `NODE_ENV` | `production` |
+
+**4. File storage.** Project → **Storage → Create → Blob**. Connecting it injects
+`BLOB_READ_WRITE_TOKEN` automatically, and photos start going to Blob instead of
+local disk. Without it, uploads still work locally but won't persist on Vercel.
+
+**5. Deploy.** The schema migrates itself on first boot. Register the first
+account — it becomes the admin.
+
+Optionally seed the demo data against your hosted database:
+
+```bash
+DATABASE_URL="your-neon-url" npm run seed
+```
+
+---
+
+## Testing
+
+96 end-to-end tests covering auth, role boundaries, validation, the status
+pipeline, search, filters, votes, comments, statistics, admin actions and
+deletion. They run against a live server, so they exercise real HTTP and real
+SQL rather than mocks.
+
+```bash
+npm run seed -- --force
+npm start
+```
+
+```bash
+npm test
+```
 
 ---
 
@@ -112,127 +226,97 @@ choice remembered), responsive down to phone width, skeleton loading states, and
 
 ```
 campusfix-web/
+├── api/index.js            Vercel serverless entry — wraps the Express app
+├── vercel.json             Build, routing and caching config
 ├── server/
-│   ├── src/
-│   │   ├── index.js        Express app, middleware, static serving
-│   │   ├── db.js           SQLite connection + schema
-│   │   ├── auth.js         hashing, JWT, role middleware
-│   │   ├── validate.js     zod schemas for every request body
-│   │   ├── upload.js       multer photo handling
-│   │   ├── seed.js         demo data
-│   │   └── routes/         auth, reports, categories, users, stats
-│   ├── data/               SQLite file + generated JWT secret (gitignored)
-│   └── uploads/            report photos (gitignored)
+│   └── src/
+│       ├── app.js          Express app (no listener, so it runs both ways)
+│       ├── index.js        Local dev server
+│       ├── db.js           Postgres — node-postgres or PGlite
+│       ├── schema.js       Idempotent migrations
+│       ├── domain.js       Statuses, roles, priorities — defined once
+│       ├── auth.js         Hashing, JWT, role middleware
+│       ├── google.js       Google OAuth 2.0 flow
+│       ├── storage.js      Vercel Blob or local disk
+│       ├── validate.js     zod schema per request body
+│       ├── seed.js         Demo data
+│       ├── routes/         auth · reports · categories · users · stats
+│       └── ../test/        End-to-end API suite
 └── client/
     └── src/
-        ├── pages/          Landing, Login, Signup, Submit, MyReports,
-        │                   ReportDetail, AdminDashboard, AdminSettings
-        ├── components/     Navbar, ReportCard, route guards, UI kit
-        ├── contexts/       auth + theme
-        ├── lib/            API client, formatting
-        └── styles/         design system
+        ├── pages/          Landing · Login · Signup · AuthCallback ·
+        │                   StudentDashboard · SubmitReport · MyReports ·
+        │                   ReportDetail · AdminDashboard · AdminSettings
+        ├── components/     Navbar · ReportCard · StatusTracker · guards · UI kit
+        ├── contexts/       Auth · theme
+        ├── lib/            API client · formatting
+        └── styles/         Design system
 ```
 
 ---
 
 ## API
 
-All endpoints are under `/api`. Everything except signup and login needs
-`Authorization: Bearer <token>`.
+Everything under `/api`. All endpoints except signup, login and `/providers`
+require `Authorization: Bearer <token>`.
 
 | Method | Endpoint | Who | Purpose |
 | --- | --- | --- | --- |
-| POST | `/auth/signup` | anyone | Create an account, returns a token |
-| POST | `/auth/login` | anyone | Log in, returns a token |
-| GET | `/auth/me` | any user | Confirm the current session |
-| GET | `/reports` | any user | List reports — `scope`, `status`, `category`, `q`, `sort`, `page`, `limit` |
+| POST | `/auth/signup` | anyone | Create an account |
+| POST | `/auth/login` | anyone | Log in |
+| GET | `/auth/me` | any user | Confirm the session |
+| GET | `/auth/providers` | anyone | Whether Google is configured |
+| GET | `/auth/google` | anyone | Start the Google flow |
+| GET | `/auth/google/callback` | anyone | Finish it |
+| GET | `/reports` | any user | List — `scope`, `status`, `category`, `location`, `q`, `sort`, `page`, `limit` |
 | POST | `/reports` | any user | File a report (multipart, optional `photo`) |
-| GET | `/reports/:id` | owner or staff | One report with its timeline and comments |
-| PATCH | `/reports/:id/status` | staff | Change status, optionally with a note |
-| PATCH | `/reports/:id/priority` | staff | Change priority |
-| DELETE | `/reports/:id` | owner or admin | Delete a report and its photo |
-| POST | `/reports/:id/vote` | any user | Toggle a support vote |
-| POST | `/reports/:id/comments` | owner or staff | Add a comment |
-| GET | `/categories` | any user | Categories for the submit dropdown |
-| POST / DELETE | `/categories`, `/categories/:id` | admin | Add or remove a category |
-| GET | `/users` | admin | List users with report counts |
-| PATCH | `/users/:id/role` | admin | Change someone's role |
+| GET | `/reports/:id` | owner or admin | One report with timeline and comments |
+| PATCH | `/reports/:id/status` | admin | Move a stage, with a note |
+| PATCH | `/reports/:id/priority` | admin | Change priority |
+| DELETE | `/reports/:id` | owner or admin | Delete, and its photo |
+| POST | `/reports/:id/vote` | any user | Toggle backing |
+| POST | `/reports/:id/comments` | owner or admin | Add a comment |
+| GET | `/categories` | any user | Categories with report counts |
+| GET | `/categories/locations` | any user | Distinct locations, for the filter |
+| POST / DELETE | `/categories`, `/categories/:id` | admin | Add or remove |
+| GET | `/users` | admin | Users with report counts |
+| PATCH | `/users/:id/role` | admin | Change a role |
 | GET | `/stats` | any user | Dashboard figures, scoped by role |
-| GET | `/health` | anyone | Liveness check |
+| GET | `/health` | anyone | Liveness, plus which database and storage are in use |
 
-`scope=all` is only honoured for staff and admins — a citizen always gets their own reports
-back regardless of what they ask for, enforced server-side rather than in the UI.
-
----
-
-## Data model
-
-**users** — `name`, `email` (unique), `password_hash`, `role`, `created_at`
-
-**reports** — `code`, `title`, `description`, `category`, `location`, `latitude`,
-`longitude`, `photo_url`, `status`, `priority`, `reporter_id`, `created_at`, `updated_at`,
-`resolved_at`
-
-**report_events** — `report_id`, `actor_id`, `type`, `from_status`, `to_status`, `note`,
-`created_at`
-
-**comments** — `report_id`, `author_id`, `body`, `created_at`
-
-**votes** — `report_id` + `user_id` as a composite key, so one vote per person per report
-
-**categories** — `name` (unique)
-
-Status is one of `open`, `in_progress`, `resolved`, `rejected`; priority is `low`, `normal`,
-`high`, `urgent`. Both are enforced by `CHECK` constraints in the schema, not only in
-application code. Deleting a report cascades to its events, comments and votes.
+`status=active` is a shorthand for everything not yet fixed or rejected.
 
 ---
 
 ## Configuration
 
-Everything has a working default; copy `server/.env.example` to `server/.env` only if you
-need to change something.
+Everything has a working default. Copy `server/.env.example` to `server/.env`
+only to override.
 
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `PORT` | `4000` | API port |
-| `JWT_SECRET` | generated | Written to `server/data/.jwt-secret` on first boot so tokens survive restarts. **Set this explicitly in production.** |
-| `CORS_ORIGIN` | reflects the request | Pin this to your domain in production |
-| `DATA_DIR` | `server/data` | Where the SQLite file lives |
-| `UPLOAD_DIR` | `server/uploads` | Where photos are written |
+| `JWT_SECRET` | generated | **Required in production** — the server refuses to start without it |
+| `DATABASE_URL` | *(unset)* | Empty runs PGlite locally. Set to a Postgres URL in production |
+| `BLOB_READ_WRITE_TOKEN` | *(unset)* | Empty writes photos to `server/uploads` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | *(unset)* | Google sign-in stays hidden until both are set |
+| `APP_ORIGIN` | request origin | Where to return after Google sign-in |
+| `CORS_ORIGIN` | reflects request | Pin to your domain in production |
 
 ---
 
-## Security notes
+## Security
 
-- Passwords are hashed with bcrypt (cost 10) and never stored or logged in plain text.
-- Auth is a signed JWT with a 7-day expiry, verified against the database on every request
-  — a deleted user's token stops working immediately.
-- Every request body is validated with zod before it reaches a route handler, and all SQL
-  goes through prepared statements with bound parameters.
-- Login and signup are rate-limited to 30 attempts per 15 minutes per IP; the rest of the
-  API to 300 requests per minute. Login returns the same message whether the email or the
-  password was wrong, so it cannot be used to discover which emails are registered.
-- Uploads are capped at 8 MB, restricted to image MIME types, and stored under generated
-  filenames rather than the name the browser supplied.
+- Passwords hashed with bcrypt (cost 10); never stored or logged in plain text.
+- JWTs expire in 7 days and are re-checked against the database on every
+  request, so a deleted account or a changed role takes effect immediately.
+- Every request body is validated with zod before reaching a handler; all SQL
+  uses bound parameters.
+- Login and signup are rate-limited to 30 attempts per 15 minutes per IP, the
+  rest of the API to 300/minute. Login returns the same message for a wrong
+  password and an unknown email, so it can't be used to discover who's
+  registered.
+- Search escapes `%` and `_` so a search term can't act as a wildcard.
+- Uploads are capped at 8 MB, restricted to image MIME types, held in memory
+  until the request validates, and stored under generated filenames.
 - `helmet` sets the standard security headers.
-
-Before putting this on the public internet: set a real `JWT_SECRET`, pin `CORS_ORIGIN`,
-and run it behind HTTPS.
-
----
-
-## Deploying
-
-The backend keeps state on disk (SQLite file + uploaded photos), so it needs a host with a
-persistent volume — a small VPS, Fly.io with a volume, Railway, or Render with a disk.
-Platforms with ephemeral filesystems will lose both on every deploy.
-
-```bash
-npm run install:all
-npm run build
-JWT_SECRET="<a long random string>" NODE_ENV=production npm start
-```
-
-Put nginx or Caddy in front for TLS. Back up `server/data/` and `server/uploads/` together
-— the database references photos by filename.

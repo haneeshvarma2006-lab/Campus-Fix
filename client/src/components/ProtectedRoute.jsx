@@ -22,22 +22,12 @@ export function ProtectedRoute({ children }) {
   return children
 }
 
-export function StaffRoute({ children }) {
-  const { user, isStaff, loading } = useAuth()
-  const location = useLocation()
-
-  if (loading) return <Loading />
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />
-  if (!isStaff) return <Navigate to="/reports" replace />
-  return children
-}
-
 export function AdminRoute({ children }) {
   const { user, isAdmin, loading } = useAuth()
   const location = useLocation()
 
   if (loading) return <Loading />
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />
-  if (!isAdmin) return <Navigate to="/reports" replace />
+  if (!isAdmin) return <Navigate to="/dashboard" replace />
   return children
 }

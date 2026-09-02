@@ -22,12 +22,12 @@ const findByEmail = (email) => queryOne('SELECT * FROM users WHERE lower(email) 
 
 /**
  * The first account on a fresh install becomes the admin — otherwise nobody
- * could ever reach the dashboard. Everyone after that is a citizen until an
+ * could ever reach the dashboard. Everyone after that is a student until an
  * admin promotes them.
  */
 async function nextRole(client = { query }) {
   const [{ n }] = await client.query('SELECT COUNT(*)::int AS n FROM users')
-  return n === 0 ? 'admin' : 'citizen'
+  return n === 0 ? 'admin' : 'student'
 }
 
 // --- email + password -------------------------------------------------------
@@ -149,7 +149,7 @@ router.get('/google/callback', asyncRoute(async (req, res) => {
     const [created] = await client.query(
       `INSERT INTO users (name, email, google_id, avatar_url, role)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [profile.name, profile.email, profile.googleId, profile.avatarUrl, n === 0 ? 'admin' : 'citizen']
+      [profile.name, profile.email, profile.googleId, profile.avatarUrl, n === 0 ? 'admin' : 'student']
     )
     return created
   })

@@ -83,7 +83,7 @@ export function requireRole(...roles) {
   }
 }
 
-export const isStaff = (user) => !!user && (user.role === 'admin' || user.role === 'staff')
+export const isAdmin = (user) => !!user && user.role === 'admin'
 
 /** Wraps an async route so a rejected promise reaches the error handler. */
 export const asyncRoute = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)

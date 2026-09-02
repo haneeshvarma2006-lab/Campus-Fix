@@ -8,7 +8,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   // A token in storage is only a claim — confirm it against the API before
-  // treating the session as real, so a revoked or expired token logs out cleanly.
+  // treating the session as real, so a revoked, expired, or tampered token
+  // logs out cleanly instead of showing a half-broken signed-in shell.
   useEffect(() => {
     const controller = new AbortController()
     if (!getToken()) {
@@ -40,6 +41,20 @@ export function AuthProvider({ children }) {
     return data.user
   }, [])
 
+  /** Takes a token handed back by an OAuth redirect and establishes the session. */
+  const adoptToken = useCallback(async (token) => {
+    setToken(token)
+    try {
+      const data = await api.me()
+      setUser(data.user)
+      return data.user
+    } catch (err) {
+      setToken(null)
+      setUser(null)
+      throw err
+    }
+  }, [])
+
   const logout = useCallback(() => {
     setToken(null)
     setUser(null)
@@ -51,9 +66,10 @@ export function AuthProvider({ children }) {
     login,
     signup,
     logout,
+    adoptToken,
     isAdmin: user?.role === 'admin',
     isStaff: user?.role === 'admin' || user?.role === 'staff',
-  }), [user, loading, login, signup, logout])
+  }), [user, loading, login, signup, logout, adoptToken])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

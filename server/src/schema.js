@@ -12,8 +12,8 @@ const STATEMENTS = [
      password_hash TEXT,
      google_id     TEXT UNIQUE,
      avatar_url    TEXT,
-     role          TEXT        NOT NULL DEFAULT 'citizen'
-                   CHECK (role IN ('citizen','staff','admin')),
+     role          TEXT        NOT NULL DEFAULT 'student'
+                   CHECK (role IN ('student','admin')),
      created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
    )`,
 
@@ -38,14 +38,14 @@ const STATEMENTS = [
      latitude    DOUBLE PRECISION,
      longitude   DOUBLE PRECISION,
      photo_url   TEXT,
-     status      TEXT        NOT NULL DEFAULT 'open'
-                 CHECK (status IN ('open','in_progress','resolved','rejected')),
+     status      TEXT        NOT NULL DEFAULT 'reported'
+                 CHECK (status IN ('reported','assigned','in_progress','fixed','rejected')),
      priority    TEXT        NOT NULL DEFAULT 'normal'
                  CHECK (priority IN ('low','normal','high','urgent')),
      reporter_id INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
      updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-     resolved_at TIMESTAMPTZ,
+     fixed_at    TIMESTAMPTZ,
      CONSTRAINT reports_coords_paired
        CHECK ((latitude IS NULL) = (longitude IS NULL))
    )`,

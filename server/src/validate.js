@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { STATUSES, ROLES, PRIORITIES } from './domain.js'
 
 /**
  * Runs a zod schema against a request property and replaces it with the parsed
@@ -49,7 +50,7 @@ export const reportSchema = z
     location: z.string().trim().max(200).default(''),
     latitude: optionalNumber.refine((v) => v === undefined || (v >= -90 && v <= 90), 'Latitude is out of range.'),
     longitude: optionalNumber.refine((v) => v === undefined || (v >= -180 && v <= 180), 'Longitude is out of range.'),
-    priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+    priority: z.enum(PRIORITIES).default('normal'),
   })
   .refine(
     // A pin needs both halves — one on its own is a location that can never be shown.
@@ -58,14 +59,16 @@ export const reportSchema = z
   )
 
 export const statusSchema = z.object({
-  status: z.enum(['open', 'in_progress', 'resolved', 'rejected'], {
-    errorMap: () => ({ message: 'Pick a valid status.' }),
-  }),
+  status: z.enum(STATUSES, { errorMap: () => ({ message: 'Pick a valid status.' }) }),
   note: z.string().trim().max(500).optional(),
-})
+}).refine(
+  // Rejecting a report without saying why leaves the reporter with nothing.
+  (v) => v.status !== 'rejected' || (v.note && v.note.length > 0),
+  { message: 'Give a reason when rejecting a report.', path: ['note'] }
+)
 
 export const prioritySchema = z.object({
-  priority: z.enum(['low', 'normal', 'high', 'urgent']),
+  priority: z.enum(PRIORITIES),
 })
 
 export const commentSchema = z.object({
@@ -77,13 +80,15 @@ export const categorySchema = z.object({
 })
 
 export const roleSchema = z.object({
-  role: z.enum(['citizen', 'staff', 'admin']),
+  role: z.enum(ROLES),
 })
 
 export const listQuerySchema = z.object({
   scope: z.enum(['mine', 'all']).default('all'),
-  status: z.enum(['all', 'open', 'in_progress', 'resolved', 'rejected']).default('all'),
+  // "active" is the working queue: everything not yet fixed or rejected.
+  status: z.enum(['all', 'active', ...STATUSES]).default('all'),
   category: z.string().trim().default('all'),
+  location: z.string().trim().max(120).default('all'),
   q: z.string().trim().max(120).default(''),
   sort: z.enum(['newest', 'oldest', 'votes', 'priority']).default('newest'),
   page: z.coerce.number().int().min(1).default(1),

@@ -5,12 +5,11 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast, Icon } from '../components/ui'
 import { formatDate } from '../lib/format'
 
-const ROLES = ['citizen', 'staff', 'admin']
+const ROLES = ['student', 'admin']
 
 const ROLE_HINT = {
-  citizen: 'Submits and tracks their own reports.',
-  staff: 'Sees every report and can change status and priority.',
-  admin: 'Everything staff can do, plus categories and roles.',
+  student: 'Files reports and tracks their own. Sees nobody else’s.',
+  admin: 'Sees every report, moves it through the stages, and manages categories and roles.',
 }
 
 function Categories() {
@@ -57,7 +56,7 @@ function Categories() {
 
   return (
     <section>
-      <h2 style={{ marginBottom: 5 }}>Categories</h2>
+      <h2 className="h2" style={{ marginBottom: 5 }}>Categories</h2>
       <p className="small muted" style={{ marginBottom: 18 }}>
         These fill the dropdown when someone files a report. Removing one does not change
         reports already filed under it.
@@ -133,10 +132,10 @@ function People() {
 
   return (
     <section>
-      <h2 style={{ marginBottom: 5 }}>People</h2>
+      <h2 className="h2" style={{ marginBottom: 5 }}>People</h2>
       <p className="small muted" style={{ marginBottom: 18 }}>
         Roles are granted here, never chosen at signup. You cannot demote yourself, and the
-        last remaining admin cannot be demoted at all.
+        last remaining admin cannot be demoted at all — so nobody can lock everyone out.
       </p>
 
       {loading ? (
@@ -181,7 +180,7 @@ function People() {
         </div>
       )}
 
-      <div className="stack stack-2" style={{ marginTop: 14 }}>
+      <div className="stack g-2" style={{ marginTop: 14 }}>
         {ROLES.map((r) => (
           <p key={r} className="tiny muted">
             <strong style={{ color: 'var(--ink-soft)' }}>{r}</strong> — {ROLE_HINT[r]}
@@ -194,17 +193,17 @@ function People() {
 
 export function AdminSettings() {
   return (
-    <div className="shell page">
+    <div className="shell page fade-in">
       <Link to="/admin" className="btn btn-quiet btn-sm" style={{ marginBottom: 14, marginLeft: -10 }}>
         <Icon.Back /> Dashboard
       </Link>
 
       <div className="page-head">
-        <h1>Settings</h1>
+        <h1 className="display" style={{ fontSize: 34 }}>Settings</h1>
         <p>Manage the categories reporters can pick from, and who can see the dashboard.</p>
       </div>
 
-      <div className="stack stack-6">
+      <div className="stack g-6">
         <Categories />
         <hr className="divider" style={{ margin: 0 }} />
         <People />

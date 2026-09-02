@@ -1,73 +1,98 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { Icon } from './ui'
-
-function initials(name = '') {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?'
-}
+import { Avatar, Icon } from './ui'
 
 export function Navbar() {
-  const { user, isStaff, isAdmin, logout } = useAuth()
-  const { theme, toggle } = useTheme()
+  const { user, isAdmin, logout } = useAuth()
+  const { theme, moods, cycle } = useTheme()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // The landing hero is a full-bleed sky; the header floats over it until the
+  // page scrolls, then picks up its own background so the links stay readable.
+  const onLanding = location.pathname === '/' && !user
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    if (!onLanding) return undefined
+    const onScroll = () => setScrolled(window.scrollY > 40)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [onLanding])
+
+  const overSky = onLanding && !scrolled
 
   const handleLogout = () => {
     logout()
     navigate('/', { replace: true })
   }
 
-  const links = user
-    ? [
-        { to: '/submit', label: 'Report an issue' },
-        { to: '/reports', label: 'My reports' },
-        ...(isStaff ? [{ to: '/admin', label: 'Dashboard' }] : []),
-        ...(isAdmin ? [{ to: '/admin/settings', label: 'Settings' }] : []),
-      ]
-    : [
-        { to: '/login', label: 'Log in' },
-        { to: '/signup', label: 'Sign up' },
-      ]
+  const links = !user
+    ? []
+    : isAdmin
+      ? [
+          { to: '/admin', label: 'Dashboard' },
+          { to: '/reports', label: 'My reports' },
+          { to: '/submit', label: 'Report an issue' },
+          { to: '/admin/settings', label: 'Settings' },
+        ]
+      : [
+          { to: '/dashboard', label: 'Dashboard' },
+          { to: '/reports', label: 'My reports' },
+          { to: '/submit', label: 'Report an issue' },
+        ]
+
+  const nextMood = moods[(moods.findIndex((m) => m.id === theme) + 1) % moods.length]
 
   const themeButton = (
     <button
       className="icon-btn"
-      onClick={toggle}
-      title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-      aria-label="Toggle colour theme"
+      onClick={cycle}
+      title={`Switch to ${nextMood.label.toLowerCase()}`}
+      aria-label={`Colour mood: ${theme}. Switch to ${nextMood.label}.`}
     >
-      {theme === 'dark' ? <Icon.Sun /> : <Icon.Moon />}
+      {theme === 'night' ? <Icon.Sun /> : <Icon.Moon />}
     </button>
   )
 
+  const navLinks = links.map((l) => (
+    <NavLink
+      key={l.to}
+      to={l.to}
+      end={l.to === '/admin'}
+      className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+    >
+      {l.label}
+    </NavLink>
+  ))
+
   return (
     <>
-      <header className="header">
+      <header className={`header ${overSky ? 'over-sky' : ''}`}>
         <div className="shell-wide header-inner">
-          <Link to={user ? '/reports' : '/'} className="brand">
-            <span className="brand-mark">CF</span>
+          <Link to="/" className="brand">
+            <span className="brand-mark">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                   strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4.5 12.5v-9h5M4.5 8h4" />
+                <circle cx="11.5" cy="11" r="1.6" fill="currentColor" stroke="none" />
+              </svg>
+            </span>
             CampusFix
           </Link>
 
           {/* Wide screens: everything lives in the bar. */}
           <nav className="nav nav-desktop">
-            {user && links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                end={l.to === '/admin'}
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-              >
-                {l.label}
-              </NavLink>
-            ))}
-
+            {navLinks}
             {user && <span className="nav-divider" />}
             {themeButton}
 
             {user ? (
               <>
-                <span className="avatar" title={`${user.name} · ${user.role}`}>{initials(user.name)}</span>
+                <Avatar name={user.name} src={user.avatarUrl} title={`${user.name} · ${user.role}`} />
                 <button className="btn btn-quiet btn-sm" onClick={handleLogout}>Log out</button>
               </>
             ) : (
@@ -78,31 +103,23 @@ export function Navbar() {
             )}
           </nav>
 
-          {/* Narrow screens: only the theme toggle stays up top. */}
-          <nav className="nav nav-compact" style={{ marginLeft: 'auto' }}>
+          {/* Narrow screens: only the essentials stay up top. */}
+          <nav className="nav-compact">
             {themeButton}
+            {user
+              ? <Avatar name={user.name} src={user.avatarUrl} size="avatar-sm" />
+              : <Link to="/login" className="btn btn-sm">Log in</Link>}
           </nav>
         </div>
       </header>
 
       {/* Narrow screens: page links become a scrollable strip below the bar. */}
-      <div className="nav-mobile">
-        {links.map((l) => (
-          <NavLink
-            key={l.to}
-            to={l.to}
-            end={l.to === '/admin'}
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-          >
-            {l.label}
-          </NavLink>
-        ))}
-        {user && (
-          <button className="nav-link" onClick={handleLogout} style={{ border: 'none', background: 'none' }}>
-            Log out
-          </button>
-        )}
-      </div>
+      {user && (
+        <div className="nav-mobile">
+          {navLinks}
+          <button className="nav-link" onClick={handleLogout}>Log out</button>
+        </div>
+      )}
     </>
   )
 }

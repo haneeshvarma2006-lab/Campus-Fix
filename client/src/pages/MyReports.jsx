@@ -1,21 +1,31 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
-import { useAuth } from '../contexts/AuthContext'
 import { ReportCard } from '../components/ReportCard'
-import { CardSkeleton, EmptyState, useToast } from '../components/ui'
+import { CardSkeleton, EmptyState, useToast, Icon } from '../components/ui'
 import { STATUSES, STATUS_LABEL } from '../lib/format'
 
-const FILTERS = ['all', ...STATUSES]
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'active', label: 'Still open' },
+  ...STATUSES.map((s) => ({ id: s, label: STATUS_LABEL[s] })),
+]
 
 export function MyReports() {
-  const { user } = useAuth()
   const { error: toastError } = useToast()
 
-  const [data, setData] = useState({ reports: [], total: 0, pages: 1 })
+  // The status filter lives in the URL, so dashboard tiles can deep-link into
+  // a filtered list and the browser's back button behaves.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const status = FILTERS.some((f) => f.id === searchParams.get('status'))
+    ? searchParams.get('status')
+    : 'all'
+
+  const [data, setData] = useState({ reports: [], total: 0, pages: 1, page: 1 })
   const [loading, setLoading] = useState(true)
-  const [status, setStatus] = useState('all')
   const [page, setPage] = useState(1)
+
+  useEffect(() => { setPage(1) }, [status])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -27,30 +37,32 @@ export function MyReports() {
     return () => controller.abort()
   }, [status, page, toastError])
 
-  const firstName = user?.name?.split(' ')[0] || 'there'
+  const setStatus = (id) => {
+    setSearchParams(id === 'all' ? {} : { status: id }, { replace: true })
+  }
 
   return (
-    <div className="shell-wide page">
-      <div className="row-between wrap page-head">
+    <div className="shell-wide page fade-in">
+      <div className="between wrap page-head">
         <div>
-          <h1>My reports</h1>
-          <p>
-            {data.total === 0
-              ? `Nothing filed yet, ${firstName}.`
-              : `${data.total} report${data.total === 1 ? '' : 's'} filed. Track where each one stands.`}
+          <h1 className="display" style={{ fontSize: 'clamp(28px, 3.6vw, 38px)' }}>My reports</h1>
+          <p className="lede">
+            {data.total === 0 ? 'Nothing here yet.' : `${data.total} report${data.total === 1 ? '' : 's'} filed. Track where each one stands.`}
           </p>
         </div>
-        <Link to="/submit" className="btn">Report an issue</Link>
+        <Link to="/submit" className="btn btn-clay">
+          <Icon.Plus width={15} height={15} /> Report an issue
+        </Link>
       </div>
 
       <div className="row wrap" style={{ gap: 7, marginBottom: 22 }}>
         {FILTERS.map((f) => (
           <button
-            key={f}
-            className={`chip ${status === f ? 'active' : ''}`}
-            onClick={() => { setStatus(f); setPage(1) }}
+            key={f.id}
+            className={`chip ${status === f.id ? 'active' : ''}`}
+            onClick={() => setStatus(f.id)}
           >
-            {f === 'all' ? 'All' : STATUS_LABEL[f]}
+            {f.label}
           </button>
         ))}
       </div>
@@ -59,7 +71,8 @@ export function MyReports() {
 
       {!loading && data.reports.length === 0 && (
         <EmptyState
-          title={status === 'all' ? 'No reports yet' : `No ${STATUS_LABEL[status].toLowerCase()} reports`}
+          icon={status === 'all' ? Icon.Camera : Icon.Search}
+          title={status === 'all' ? 'No reports yet' : `Nothing ${(FILTERS.find((f) => f.id === status)?.label || '').toLowerCase()}`}
           message={
             status === 'all'
               ? 'When you spot something broken, dirty, or unsafe, file it here and it gets a reference number you can follow.'
@@ -67,7 +80,7 @@ export function MyReports() {
           }
           action={
             status === 'all'
-              ? <Link to="/submit" className="btn">Report your first issue</Link>
+              ? <Link to="/submit" className="btn btn-clay">Report your first issue</Link>
               : <button className="btn btn-ghost" onClick={() => setStatus('all')}>Show all</button>
           }
         />

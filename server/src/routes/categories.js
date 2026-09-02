@@ -39,4 +39,17 @@ router.delete('/:id', requireRole('admin'), asyncRoute(async (req, res) => {
   res.json({ ok: true, reportsKeepingName: n })
 }))
 
+/**
+ * Distinct locations that actually appear on reports, so the admin filter can
+ * offer real places rather than a free-text box.
+ */
+router.get('/locations', requireAuth, asyncRoute(async (_req, res) => {
+  const locations = await query(
+    `SELECT location, COUNT(*)::int AS report_count
+     FROM reports WHERE location <> ''
+     GROUP BY location ORDER BY report_count DESC, location ASC LIMIT 50`
+  )
+  res.json({ locations })
+}))
+
 export default router

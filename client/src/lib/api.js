@@ -68,6 +68,7 @@ export const api = {
   signup: (body) => request('/auth/signup', { method: 'POST', body }),
   login: (body) => request('/auth/login', { method: 'POST', body }),
   me: (signal) => request('/auth/me', { signal }),
+  providers: (signal) => request('/auth/providers', { signal }),
 
   listReports: (params, signal) => request(`/reports${qs(params)}`, { signal }),
   getReport: (id, signal) => request(`/reports/${id}`, { signal }),
@@ -79,6 +80,7 @@ export const api = {
   comment: (id, body) => request(`/reports/${id}/comments`, { method: 'POST', body }),
 
   listCategories: (signal) => request('/categories', { signal }),
+  listLocations: (signal) => request('/categories/locations', { signal }),
   addCategory: (body) => request('/categories', { method: 'POST', body }),
   deleteCategory: (id) => request(`/categories/${id}`, { method: 'DELETE' }),
 

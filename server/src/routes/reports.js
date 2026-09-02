@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { query, queryOne, transaction } from '../db.js'
-import { requireAuth, requireRole, isStaff, asyncRoute } from '../auth.js'
+import { requireAuth, requireRole, isAdmin, asyncRoute } from '../auth.js'
+import { ACTIVE, CLOSED, PRIORITY_RANK } from '../domain.js'
 import { photoUpload, savePhoto, deletePhoto } from '../storage.js'
 import {
   validate, reportSchema, statusSchema, prioritySchema, commentSchema, listQuerySchema,
@@ -43,7 +44,7 @@ function toReport(row) {
     reporterAvatar: row.reporter_avatar || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    resolvedAt: row.resolved_at,
+    fixedAt: row.fixed_at,
     votes: Number(row.votes ?? 0),
     comments: Number(row.comment_count ?? 0),
     hasVoted: Boolean(row.has_voted),
@@ -89,7 +90,7 @@ const asId = (value) => (/^\d+$/.test(String(value)) ? Number(value) : null)
 // --- list -------------------------------------------------------------------
 
 router.get('/', requireAuth, validate(listQuerySchema, 'query'), asyncRoute(async (req, res) => {
-  const { scope, status, category, q, sort, page, limit } = req.validatedQuery
+  const { scope, status, category, location, q, sort, page, limit } = req.validatedQuery
   const viewer = req.user.id
 
   const where = []
@@ -99,16 +100,28 @@ router.get('/', requireAuth, validate(listQuerySchema, 'query'), asyncRoute(asyn
     return `$${params.length}`
   }
 
-  // Citizens can only ever list their own reports; staff and admins choose.
-  if (scope === 'mine' || !isStaff(req.user)) where.push(`r.reporter_id = ${bind(viewer)}`)
-  if (status !== 'all') where.push(`r.status = ${bind(status)}`)
+  // Students can only ever list their own reports; admins choose the scope.
+  if (scope === 'mine' || !isAdmin(req.user)) where.push(`r.reporter_id = ${bind(viewer)}`)
+
+  if (status === 'active') {
+    where.push(`r.status = ANY(${bind(ACTIVE)})`)
+  } else if (status !== 'all') {
+    where.push(`r.status = ${bind(status)}`)
+  }
+
   if (category !== 'all' && category !== '') where.push(`r.category = ${bind(category)}`)
+
+  const ilike = (col, param) => `${col} ILIKE ${param} ESCAPE '\\'`
+
+  if (location !== 'all' && location !== '') {
+    where.push(ilike('r.location', bind(`%${escapeLike(location)}%`)))
+  }
 
   if (q) {
     const p = bind(`%${escapeLike(q)}%`)
     where.push(
-      `(r.title ILIKE ${p} ESCAPE '\\' OR r.description ILIKE ${p} ESCAPE '\\'` +
-      ` OR r.location ILIKE ${p} ESCAPE '\\' OR r.code ILIKE ${p} ESCAPE '\\')`
+      `(${['r.title', 'r.description', 'r.location', 'r.code']
+        .map((col) => ilike(col, p)).join(' OR ')})`
     )
   }
 
@@ -117,7 +130,8 @@ router.get('/', requireAuth, validate(listQuerySchema, 'query'), asyncRoute(asyn
   const orderBy = {
     oldest: 'r.created_at ASC',
     votes: 'votes DESC, r.created_at DESC',
-    priority: `CASE r.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END, r.created_at DESC`,
+    priority: `CASE r.priority ${Object.entries(PRIORITY_RANK)
+      .map(([p, rank]) => `WHEN '${p}' THEN ${rank}`).join(' ')} END, r.created_at DESC`,
     newest: 'r.created_at DESC',
   }[sort]
 
@@ -159,7 +173,7 @@ router.post('/', requireAuth, photoUpload, validate(reportSchema), asyncRoute(as
       [code, title, description, category, location,
        latitude ?? null, longitude ?? null, photoUrl, priority, req.user.id]
     )
-    await logEvent(client, { reportId: row.id, actorId: req.user.id, type: 'created', to: 'open' })
+    await logEvent(client, { reportId: row.id, actorId: req.user.id, type: 'created', to: 'reported' })
     return row.id
   })
 
@@ -173,7 +187,7 @@ router.get('/:id', requireAuth, asyncRoute(async (req, res) => {
   const row = id && (await getReport(id, req.user.id))
   if (!row) return res.status(404).json({ error: 'That report does not exist.' })
 
-  if (row.reporter_id !== req.user.id && !isStaff(req.user)) {
+  if (row.reporter_id !== req.user.id && !isAdmin(req.user)) {
     return res.status(403).json({ error: 'That report belongs to someone else.' })
   }
 
@@ -217,7 +231,7 @@ router.get('/:id', requireAuth, asyncRoute(async (req, res) => {
 
 // --- status / priority (staff and admins) -----------------------------------
 
-router.patch('/:id/status', requireRole('admin', 'staff'), validate(statusSchema),
+router.patch('/:id/status', requireRole('admin'), validate(statusSchema),
   asyncRoute(async (req, res) => {
     const id = asId(req.params.id)
     const report = id && (await queryOne('SELECT * FROM reports WHERE id = $1', [id]))
@@ -233,7 +247,7 @@ router.patch('/:id/status', requireRole('admin', 'staff'), validate(statusSchema
         `UPDATE reports
          SET status = $1,
              updated_at = now(),
-             resolved_at = CASE WHEN $1 = 'resolved' THEN now() ELSE NULL END
+             fixed_at = CASE WHEN $1 = 'fixed' THEN now() ELSE NULL END
          WHERE id = $2`,
         [status, report.id]
       )
@@ -247,7 +261,7 @@ router.patch('/:id/status', requireRole('admin', 'staff'), validate(statusSchema
   })
 )
 
-router.patch('/:id/priority', requireRole('admin', 'staff'), validate(prioritySchema),
+router.patch('/:id/priority', requireRole('admin'), validate(prioritySchema),
   asyncRoute(async (req, res) => {
     const id = asId(req.params.id)
     const report = id && (await queryOne('SELECT * FROM reports WHERE id = $1', [id]))
@@ -311,7 +325,7 @@ router.post('/:id/comments', requireAuth, validate(commentSchema), asyncRoute(as
   const report = id && (await queryOne('SELECT * FROM reports WHERE id = $1', [id]))
   if (!report) return res.status(404).json({ error: 'That report does not exist.' })
 
-  if (report.reporter_id !== req.user.id && !isStaff(req.user)) {
+  if (report.reporter_id !== req.user.id && !isAdmin(req.user)) {
     return res.status(403).json({ error: 'That report belongs to someone else.' })
   }
 
