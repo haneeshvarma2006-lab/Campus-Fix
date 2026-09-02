@@ -1,0 +1,14 @@
+node_modules/
+dist/
+
+# SQLite database, WAL files, and the generated JWT secret
+server/data/
+
+# Uploaded report photos
+server/uploads/*
+!server/uploads/.gitkeep
+
+.env
+.env.local
+*.log
+.DS_Store

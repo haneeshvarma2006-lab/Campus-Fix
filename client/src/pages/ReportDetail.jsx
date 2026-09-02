@@ -1,0 +1,338 @@
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { api } from '../lib/api'
+import { useAuth } from '../contexts/AuthContext'
+import { StatusBadge, PriorityTag, useToast, Icon } from '../components/ui'
+import {
+  STATUSES, STATUS_LABEL, PRIORITIES, PRIORITY_LABEL,
+  formatDateTime, timeAgo,
+} from '../lib/format'
+
+function EventLine({ event }) {
+  const label = event.type === 'created'
+    ? 'Report filed'
+    : event.type === 'priority'
+      ? `Priority changed from ${PRIORITY_LABEL[event.fromStatus] || event.fromStatus} to ${PRIORITY_LABEL[event.toStatus] || event.toStatus}`
+      : `Status changed to ${STATUS_LABEL[event.toStatus] || event.toStatus}`
+
+  return (
+    <div className="timeline-item">
+      <span className={`timeline-dot tone-${event.toStatus || 'open'}`} />
+      <div className="stack stack-2" style={{ flex: 1, minWidth: 0 }}>
+        <div className="row wrap" style={{ gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 550 }}>{label}</span>
+          <span className="tiny muted mono">{formatDateTime(event.createdAt)}</span>
+        </div>
+        {event.actorName && <span className="tiny muted">by {event.actorName}</span>}
+        {event.note && (
+          <p className="small" style={{ color: 'var(--gray-600)', fontStyle: 'italic' }}>“{event.note}”</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function ReportDetail() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { user, isStaff } = useAuth()
+  const { notify, error: toastError } = useToast()
+
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState('')
+  const [comment, setComment] = useState('')
+  const [statusNote, setStatusNote] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback((signal) => {
+    setLoading(true)
+    return api.getReport(id, signal)
+      .then(setData)
+      .catch((err) => { if (err.name !== 'AbortError') setNotFound(err.message) })
+      .finally(() => setLoading(false))
+  }, [id])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    load(controller.signal)
+    return () => controller.abort()
+  }, [load])
+
+  if (loading) {
+    return (
+      <div className="shell-wide page">
+        <div className="stack stack-3">
+          <div className="skeleton" style={{ height: 14, width: 130 }} />
+          <div className="skeleton" style={{ height: 28, width: '55%' }} />
+          <div className="skeleton" style={{ height: 200, width: '100%' }} />
+        </div>
+      </div>
+    )
+  }
+
+  if (notFound || !data) {
+    return (
+      <div className="shell page">
+        <div className="empty">
+          <h3>Report unavailable</h3>
+          <p>{notFound || 'That report could not be loaded.'}</p>
+          <Link to="/reports" className="btn btn-ghost">Back to my reports</Link>
+        </div>
+      </div>
+    )
+  }
+
+  const { report, events, comments } = data
+  const canDelete = report.reporterId === user?.id || user?.role === 'admin'
+
+  const changeStatus = async (status) => {
+    setBusy(true)
+    try {
+      await api.setStatus(report.id, { status, note: statusNote.trim() || undefined })
+      setStatusNote('')
+      await load()
+      notify(`Marked as ${STATUS_LABEL[status].toLowerCase()}.`)
+    } catch (err) {
+      toastError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const changePriority = async (priority) => {
+    setBusy(true)
+    try {
+      await api.setPriority(report.id, { priority })
+      await load()
+      notify(`Priority set to ${PRIORITY_LABEL[priority].toLowerCase()}.`)
+    } catch (err) {
+      toastError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const toggleVote = async () => {
+    try {
+      const { report: updated } = await api.vote(report.id)
+      setData((d) => ({ ...d, report: updated }))
+    } catch (err) {
+      toastError(err.message)
+    }
+  }
+
+  const addComment = async (e) => {
+    e.preventDefault()
+    if (!comment.trim()) return
+    setBusy(true)
+    try {
+      const { comment: created } = await api.comment(report.id, { body: comment.trim() })
+      setData((d) => ({ ...d, comments: [...d.comments, created] }))
+      setComment('')
+    } catch (err) {
+      toastError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async () => {
+    if (!window.confirm('Delete this report permanently? This cannot be undone.')) return
+    setBusy(true)
+    try {
+      await api.deleteReport(report.id)
+      notify('Report deleted.')
+      navigate(isStaff ? '/admin' : '/reports', { replace: true })
+    } catch (err) {
+      toastError(err.message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="shell-wide page">
+      <Link to={isStaff ? '/admin' : '/reports'} className="btn btn-quiet btn-sm" style={{ marginBottom: 14, marginLeft: -10 }}>
+        <Icon.Back /> {isStaff ? 'Dashboard' : 'My reports'}
+      </Link>
+
+      <div className="detail-grid">
+        {/* --- main column --- */}
+        <div className="stack stack-5">
+          <div>
+            <div className="row wrap" style={{ gap: 9, marginBottom: 10 }}>
+              <span className="mono small muted">#{report.code}</span>
+              <StatusBadge status={report.status} />
+              <span className="tag">{report.category}</span>
+              <PriorityTag priority={report.priority} />
+            </div>
+
+            <h1 style={{ marginBottom: 10 }}>{report.title}</h1>
+
+            <p className="small muted">
+              Filed by {report.reporterName} · {timeAgo(report.createdAt)}
+              {report.updatedAt !== report.createdAt && ` · updated ${timeAgo(report.updatedAt)}`}
+            </p>
+          </div>
+
+          {report.photoUrl && (
+            <img src={report.photoUrl} alt={report.title} className="detail-photo" />
+          )}
+
+          <div className="card">
+            <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>{report.description}</p>
+          </div>
+
+          <div>
+            <h2 style={{ marginBottom: 16 }}>History</h2>
+            <div className="card">
+              <div className="timeline">
+                {events.map((e) => <EventLine key={e.id} event={e} />)}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h2 style={{ marginBottom: 16 }}>
+              Comments {comments.length > 0 && <span className="muted" style={{ fontWeight: 400 }}>· {comments.length}</span>}
+            </h2>
+
+            <div className="stack stack-4">
+              {comments.length === 0 && (
+                <p className="small muted">
+                  No comments yet. The reporter and the maintenance team can talk here.
+                </p>
+              )}
+
+              {comments.map((c) => (
+                <div key={c.id} className="comment">
+                  <div className="stack stack-2" style={{ flex: 1 }}>
+                    <div className="row wrap" style={{ gap: 8 }}>
+                      <strong style={{ fontSize: 13.5 }}>{c.authorName}</strong>
+                      {c.authorRole !== 'citizen' && <span className="role-pill">{c.authorRole}</span>}
+                      <span className="tiny muted mono">{timeAgo(c.createdAt)}</span>
+                    </div>
+                    <div className="comment-body">{c.body}</div>
+                  </div>
+                </div>
+              ))}
+
+              <form onSubmit={addComment} className="stack stack-2">
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Add a comment…"
+                  maxLength={2000}
+                  className="input"
+                  style={{ minHeight: 82, resize: 'vertical' }}
+                />
+                <div className="row">
+                  <span className="char-count">{comment.length}/2000</span>
+                  <span className="spacer" />
+                  <button type="submit" className="btn btn-sm" disabled={busy || !comment.trim()}>
+                    Post comment
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {/* --- side column --- */}
+        <aside className="stack stack-4 sticky-side">
+          <div className="card">
+            <h3 style={{ marginBottom: 12 }}>Details</h3>
+            <dl style={{ margin: 0 }}>
+              <div className="kv"><dt>Reference</dt><dd className="mono">#{report.code}</dd></div>
+              <div className="kv"><dt>Status</dt><dd>{STATUS_LABEL[report.status]}</dd></div>
+              <div className="kv"><dt>Priority</dt><dd>{PRIORITY_LABEL[report.priority]}</dd></div>
+              <div className="kv"><dt>Category</dt><dd>{report.category}</dd></div>
+              <div className="kv"><dt>Location</dt><dd>{report.location || '—'}</dd></div>
+              <div className="kv"><dt>Filed</dt><dd>{formatDateTime(report.createdAt)}</dd></div>
+              {report.resolvedAt && (
+                <div className="kv"><dt>Resolved</dt><dd>{formatDateTime(report.resolvedAt)}</dd></div>
+              )}
+            </dl>
+
+            {report.coords && (
+              <a
+                className="btn btn-ghost btn-sm btn-block"
+                style={{ marginTop: 14 }}
+                href={`https://www.openstreetmap.org/?mlat=${report.coords.latitude}&mlon=${report.coords.longitude}#map=18/${report.coords.latitude}/${report.coords.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon.Pin /> Open on a map
+              </a>
+            )}
+
+            <button
+              className={`btn btn-sm btn-block ${report.hasVoted ? '' : 'btn-ghost'}`}
+              style={{ marginTop: 8 }}
+              onClick={toggleVote}
+            >
+              <Icon.Arrow />
+              {report.hasVoted ? 'Supported' : 'Support this'} · {report.votes}
+            </button>
+          </div>
+
+          {isStaff && (
+            <div className="card">
+              <h3 style={{ marginBottom: 4 }}>Update</h3>
+              <p className="tiny muted" style={{ marginBottom: 14 }}>
+                Visible to the reporter as soon as you save it.
+              </p>
+
+              <div className="field" style={{ marginBottom: 12 }}>
+                <label htmlFor="note">Note <span className="muted" style={{ fontWeight: 400 }}>· optional</span></label>
+                <textarea
+                  id="note"
+                  value={statusNote}
+                  onChange={(e) => setStatusNote(e.target.value)}
+                  placeholder="e.g. Assigned to the maintenance team."
+                  maxLength={500}
+                  style={{ minHeight: 66 }}
+                />
+              </div>
+
+              <label className="small" style={{ fontWeight: 550, display: 'block', marginBottom: 8 }}>
+                Set status
+              </label>
+              <div className="row wrap" style={{ gap: 6, marginBottom: 16 }}>
+                {STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    className={`chip ${report.status === s ? 'active' : ''}`}
+                    disabled={busy}
+                    onClick={() => changeStatus(s)}
+                  >
+                    {STATUS_LABEL[s]}
+                  </button>
+                ))}
+              </div>
+
+              <label htmlFor="priority" className="small" style={{ fontWeight: 550, display: 'block', marginBottom: 8 }}>
+                Priority
+              </label>
+              <select
+                id="priority"
+                className="input"
+                value={report.priority}
+                disabled={busy}
+                onChange={(e) => changePriority(e.target.value)}
+              >
+                {PRIORITIES.map((p) => <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>)}
+              </select>
+            </div>
+          )}
+
+          {canDelete && (
+            <button className="btn btn-ghost btn-sm" onClick={remove} disabled={busy} style={{ color: 'var(--danger)' }}>
+              <Icon.Trash /> Delete report
+            </button>
+          )}
+        </aside>
+      </div>
+    </div>
+  )
+}
