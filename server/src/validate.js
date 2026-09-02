@@ -1,13 +1,18 @@
 import { z } from 'zod'
+import { removeUpload } from './upload.js'
 
 /**
  * Runs a zod schema against a request property and replaces it with the parsed
  * value, so downstream handlers always see coerced, trimmed data.
+ *
+ * Multer writes the upload to disk before this runs, so a rejected request has
+ * to take its file back down or the directory fills with orphans.
  */
 export function validate(schema, source = 'body') {
   return (req, res, next) => {
     const result = schema.safeParse(req[source])
     if (!result.success) {
+      if (req.file) removeUpload(`/uploads/${req.file.filename}`)
       const first = result.error.issues[0]
       return res.status(400).json({
         error: first?.message || 'That request was not valid.',
@@ -44,7 +49,11 @@ export const reportSchema = z.object({
   latitude: optionalNumber.refine((v) => v === undefined || (v >= -90 && v <= 90), 'Latitude is out of range.'),
   longitude: optionalNumber.refine((v) => v === undefined || (v >= -180 && v <= 180), 'Longitude is out of range.'),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
-})
+}).refine(
+  // A pin needs both halves — one on its own is a location that can never be shown.
+  (v) => (v.latitude === undefined) === (v.longitude === undefined),
+  { message: 'A map pin needs both a latitude and a longitude.', path: ['longitude'] }
+)
 
 export const statusSchema = z.object({
   status: z.enum(['open', 'in_progress', 'resolved', 'rejected'], {

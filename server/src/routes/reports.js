@@ -65,6 +65,14 @@ const logEvent = db.prepare(`
 const getReport = (id, viewer) =>
   db.prepare(`${SELECT_REPORT} WHERE r.id = @id`).get({ id, viewer })
 
+/**
+ * Escapes the LIKE metacharacters so a search for "50%" or "block_c" matches
+ * that text literally instead of turning into a wildcard that matches everything.
+ * Pair this with an ESCAPE clause on the LIKE.
+ */
+const LIKE_ESCAPE = '\\'
+const escapeLike = (term) => term.replace(/[\\%_]/g, (ch) => LIKE_ESCAPE + ch)
+
 // --- list -------------------------------------------------------------------
 
 router.get('/', requireAuth, validate(listQuerySchema, 'query'), (req, res) => {
@@ -88,8 +96,11 @@ router.get('/', requireAuth, validate(listQuerySchema, 'query'), (req, res) => {
     params.category = category
   }
   if (q) {
-    where.push('(r.title LIKE @q OR r.description LIKE @q OR r.location LIKE @q OR r.code LIKE @q)')
-    params.q = `%${q}%`
+    const like = (col) => `${col} LIKE @q ESCAPE '\\'`
+    where.push(
+      `(${[like('r.title'), like('r.description'), like('r.location'), like('r.code')].join(' OR ')})`
+    )
+    params.q = `%${escapeLike(q)}%`
   }
 
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : ''
