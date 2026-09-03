@@ -7,7 +7,7 @@ import cors from 'cors'
 import morgan from 'morgan'
 import rateLimit from 'express-rate-limit'
 
-import { optionalAuth, asyncRoute } from './auth.js'
+import { optionalAuth, asyncRoute, configProblems } from './auth.js'
 import { UPLOAD_DIR, usingBlob, localUploadsAvailable } from './storage.js'
 import { describeDatabase } from './db.js'
 import authRoutes from './routes/auth.js'
@@ -63,14 +63,18 @@ export function createApp() {
     app.use('/uploads', (_req, res) => res.status(404).json({ error: 'No such file.' }))
   }
 
-  app.get('/api/health', (_req, res) =>
-    res.json({
-      ok: true,
+  // Health has to answer even when the app is misconfigured — it is the only
+  // thing that can explain why nothing else works.
+  app.get('/api/health', (_req, res) => {
+    const problems = configProblems()
+    res.status(problems.length ? 503 : 200).json({
+      ok: problems.length === 0,
       database: describeDatabase(),
       storage: usingBlob ? 'Vercel Blob' : localUploadsAvailable ? 'local disk' : 'not configured',
+      problems,
       uptime: process.uptime(),
     })
-  )
+  })
 
   app.use('/api/auth', authRoutes)
   app.use('/api/reports', reportRoutes)
@@ -100,8 +104,12 @@ export function createApp() {
   app.use((err, _req, res, _next) => {
     console.error(err)
     const status = err.status || 500
+    // 4xx messages are written for the user. A 5xx is only surfaced when the
+    // code deliberately marked it safe — a misconfiguration the operator needs
+    // to see, never an internal failure that might leak detail.
+    const safe = status < 500 || err.expose === true
     res.status(status).json({
-      error: status < 500 ? err.message : 'Something went wrong on our side.',
+      error: safe ? err.message : 'Something went wrong on our side.',
     })
   })
 

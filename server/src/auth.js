@@ -9,27 +9,47 @@ const TOKEN_TTL = '7d'
  * The JWT secret must be stable across restarts and across serverless
  * instances, or tokens die unpredictably. In production it is required; in
  * development a throwaway one is generated so the app still starts.
+ *
+ * A missing secret is recorded rather than thrown at import. Throwing here
+ * takes down the whole serverless function before it can serve anything —
+ * including the health endpoint that would have explained the problem.
  */
 function resolveSecret() {
-  if (process.env.JWT_SECRET) return process.env.JWT_SECRET
+  if (process.env.JWT_SECRET) return { secret: process.env.JWT_SECRET, problem: null }
 
   if (process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'JWT_SECRET must be set in production — without it every restart logs all users out.'
-    )
+    const problem =
+      'JWT_SECRET is not set. Add it to the environment and redeploy — ' +
+      'without it, sign-in cannot be trusted across restarts.'
+    console.error(`Configuration error: ${problem}`)
+    return { secret: null, problem }
   }
 
   console.warn('JWT_SECRET is not set — generating a temporary one for this process.')
-  return crypto.randomBytes(48).toString('hex')
+  return { secret: crypto.randomBytes(48).toString('hex'), problem: null }
 }
 
-const SECRET = resolveSecret()
+const { secret: SECRET, problem: secretProblem } = resolveSecret()
+
+/** Everything that must be configured before the app can serve requests. */
+export function configProblems() {
+  const problems = []
+  if (secretProblem) problems.push(secretProblem)
+  return problems
+}
+
+function requireSecret() {
+  if (!SECRET) {
+    throw Object.assign(new Error(secretProblem), { status: 503, expose: true })
+  }
+  return SECRET
+}
 
 export const hashPassword = (plain) => bcrypt.hash(plain, 10)
 export const verifyPassword = (plain, hash) => (hash ? bcrypt.compare(plain, hash) : Promise.resolve(false))
 
 export function signToken(user) {
-  return jwt.sign({ sub: user.id, role: user.role }, SECRET, { expiresIn: TOKEN_TTL })
+  return jwt.sign({ sub: user.id, role: user.role }, requireSecret(), { expiresIn: TOKEN_TTL })
 }
 
 export function publicUser(user) {
@@ -58,7 +78,7 @@ export async function optionalAuth(req, _res, next) {
   if (!token) return next()
 
   try {
-    const payload = jwt.verify(token, SECRET)
+    const payload = jwt.verify(token, requireSecret())
     // Re-read the user rather than trusting the token's claims, so a role
     // change or a deleted account takes effect on the very next request.
     req.user = (await queryOne('SELECT * FROM users WHERE id = $1', [payload.sub])) || undefined
