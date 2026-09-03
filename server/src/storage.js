@@ -16,7 +16,22 @@ export const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(ROOT, 'uploads')
  */
 export const usingBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN)
 
-if (!usingBlob) fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+/**
+ * Serverless filesystems are read-only apart from /tmp, so creating the upload
+ * directory there would throw at import time and take the whole function down
+ * on its first cold start. Local disk is only ever used off-platform.
+ */
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME)
+
+export const localUploadsAvailable = !usingBlob && !isServerless
+
+if (localUploadsAvailable) {
+  try {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+  } catch (err) {
+    console.error('Could not create the upload directory:', err.message)
+  }
+}
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic'])
 const EXT = {
@@ -62,6 +77,14 @@ function filenameFor(file) {
  */
 export async function savePhoto(file) {
   if (!file) return null
+
+  if (!usingBlob && !localUploadsAvailable) {
+    throw Object.assign(
+      new Error('Photo uploads are not configured on this deployment. Add a Blob store and set BLOB_READ_WRITE_TOKEN.'),
+      { status: 503 }
+    )
+  }
+
   const name = filenameFor(file)
 
   if (usingBlob) {
@@ -89,7 +112,7 @@ export async function deletePhoto(photoUrl) {
       return
     }
 
-    if (!photoUrl.startsWith('/uploads/')) return
+    if (!photoUrl.startsWith('/uploads/') || !localUploadsAvailable) return
     const target = path.join(UPLOAD_DIR, path.basename(photoUrl))
     // Guard against a crafted photo_url escaping the upload directory.
     if (path.dirname(target) !== path.resolve(UPLOAD_DIR)) return

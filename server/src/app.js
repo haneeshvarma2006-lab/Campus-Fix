@@ -8,7 +8,7 @@ import morgan from 'morgan'
 import rateLimit from 'express-rate-limit'
 
 import { optionalAuth, asyncRoute } from './auth.js'
-import { UPLOAD_DIR, usingBlob } from './storage.js'
+import { UPLOAD_DIR, usingBlob, localUploadsAvailable } from './storage.js'
 import { describeDatabase } from './db.js'
 import authRoutes from './routes/auth.js'
 import reportRoutes from './routes/reports.js'
@@ -53,7 +53,7 @@ export function createApp() {
   app.use(asyncRoute(optionalAuth))
 
   // Locally stored photos. Filenames are unique and immutable, so cache hard.
-  if (!usingBlob) {
+  if (localUploadsAvailable) {
     app.use('/uploads', express.static(UPLOAD_DIR, {
       maxAge: '30d',
       setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
@@ -67,7 +67,7 @@ export function createApp() {
     res.json({
       ok: true,
       database: describeDatabase(),
-      storage: usingBlob ? 'Vercel Blob' : 'local disk',
+      storage: usingBlob ? 'Vercel Blob' : localUploadsAvailable ? 'local disk' : 'not configured',
       uptime: process.uptime(),
     })
   )
