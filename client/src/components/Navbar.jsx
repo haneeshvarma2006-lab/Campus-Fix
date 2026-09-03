@@ -10,8 +10,8 @@ export function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // The landing hero is a full-bleed sky; the header floats over it until the
-  // page scrolls, then picks up its own background so the links stay readable.
+  // The landing stage is a full-bleed dark scene; the header floats over it in
+  // light-on-dark until the page scrolls past the hero.
   const onLanding = location.pathname === '/' && !user
   const [scrolled, setScrolled] = useState(false)
 
@@ -23,7 +23,7 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [onLanding])
 
-  const overSky = onLanding && !scrolled
+  const overStage = onLanding && !scrolled
 
   const handleLogout = () => {
     logout()
@@ -71,7 +71,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className={`header ${overSky ? 'over-sky' : ''}`}>
+      <header className={`header ${onLanding ? 'on-stage' : ''} ${overStage ? 'over-stage' : ''}`}>
         <div className="shell-wide header-inner">
           <Link to="/" className="brand">
             <span className="brand-mark">

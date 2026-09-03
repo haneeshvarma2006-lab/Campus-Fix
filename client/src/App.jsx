@@ -1,8 +1,9 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute'
 import { useAuth } from './contexts/AuthContext'
 import { Landing } from './pages/Landing'
+import { Product } from './pages/Product'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { AuthCallback } from './pages/AuthCallback'
@@ -22,6 +23,13 @@ function Home() {
 }
 
 export default function App() {
+  const location = useLocation()
+  const { user } = useAuth()
+
+  // The landing stage is a full-bleed dark scene that brings its own footer,
+  // so the app chrome steps out of its way.
+  const onStage = location.pathname === '/' && !user
+
   return (
     <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
@@ -29,6 +37,7 @@ export default function App() {
       <main style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/product" element={<Product />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
@@ -45,12 +54,14 @@ export default function App() {
         </Routes>
       </main>
 
-      <footer className="footer">
-        <div className="shell-wide between wrap">
-          <span>CampusFix — report it, track it, get it fixed.</span>
-          <span className="mono tiny">React · Express · Postgres</span>
-        </div>
-      </footer>
+      {!onStage && (
+        <footer className="footer">
+          <div className="shell-wide between wrap">
+            <span>CampusFix — report it, track it, get it fixed.</span>
+            <span className="mono tiny">React · Express · Postgres</span>
+          </div>
+        </footer>
+      )}
     </div>
   )
 }
