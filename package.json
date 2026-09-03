@@ -2,7 +2,7 @@
   "name": "campusfix",
   "private": true,
   "version": "1.0.0",
-  "description": "CampusFix \u2014 report and track civic/campus maintenance issues. Express + SQLite backend, React frontend.",
+  "description": "CampusFix — report and track civic/campus maintenance issues. Express + SQLite backend, React frontend.",
   "scripts": {
     "install:all": "npm install && npm --prefix server install && npm --prefix client install",
     "dev": "concurrently -n server,client -c blue,magenta \"npm:dev:server\" \"npm:dev:client\"",
@@ -20,5 +20,6 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "type": "module"
 }

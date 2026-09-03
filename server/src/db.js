@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { registerCheck } from './health.js'
 
 /**
  * Postgres access layer.
@@ -59,7 +60,19 @@ function validateConnectionString(value) {
   return unquoted
 }
 
-const connectionString = validateConnectionString(rawConnectionString)
+let connectionString = ''
+let connectionProblem = null
+
+try {
+  connectionString = validateConnectionString(rawConnectionString)
+} catch (err) {
+  // Recorded rather than thrown: a bad connection string must still let the
+  // app boot far enough to report what is wrong.
+  connectionProblem = err.message
+  console.error(`Configuration error: ${err.message}`)
+}
+
+registerCheck(() => connectionProblem)
 
 export const usingRemote = Boolean(connectionString)
 export const describeDatabase = () =>

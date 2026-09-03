@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { queryOne } from './db.js'
+import { registerCheck } from './health.js'
 
 const TOKEN_TTL = '7d'
 
@@ -31,12 +32,7 @@ function resolveSecret() {
 
 const { secret: SECRET, problem: secretProblem } = resolveSecret()
 
-/** Everything that must be configured before the app can serve requests. */
-export function configProblems() {
-  const problems = []
-  if (secretProblem) problems.push(secretProblem)
-  return problems
-}
+registerCheck(() => secretProblem)
 
 function requireSecret() {
   if (!SECRET) {
