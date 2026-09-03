@@ -3,35 +3,40 @@ import { api } from '../lib/api'
 import { Icon } from './ui'
 
 /**
- * Starts the server-side OAuth flow with a full-page navigation — the token
- * exchange needs the client secret, so it cannot happen in the browser.
+ * Starts the server-side OAuth flow with a full-page navigation. The token
+ * exchange needs the client secret, so it cannot happen in the browser — the
+ * frontend never sees a Google credential.
  *
- * The button renders nothing at all until the server confirms Google is
- * configured, so an install without credentials simply does not offer it.
+ * Renders a disabled explanation rather than nothing when Google is not
+ * configured, so it is obvious that setup is pending rather than broken.
  */
-export function GoogleButton({ label = 'Continue with Google', next = '/dashboard' }) {
-  const [available, setAvailable] = useState(false)
+export function GoogleButton({ label = 'Continue with Google', next = '/' }) {
+  const [state, setState] = useState('checking')
 
   useEffect(() => {
-    const controller = new AbortController()
-    api.providers(controller.signal)
-      .then((d) => setAvailable(Boolean(d.google)))
-      .catch(() => setAvailable(false))
-    return () => controller.abort()
+    const c = new AbortController()
+    api.providers(c.signal)
+      .then((d) => setState(d.google ? 'ready' : 'unconfigured'))
+      .catch(() => setState('unconfigured'))
+    return () => c.abort()
   }, [])
 
-  if (!available) return null
+  if (state === 'checking') {
+    return <div className="skel" style={{ height: 48, borderRadius: 12 }} aria-hidden="true" />
+  }
+
+  if (state === 'unconfigured') {
+    return (
+      <div className="panel t-xs muted" style={{ textAlign: 'center' }}>
+        Google sign-in isn&rsquo;t set up on this server yet — use email below.
+      </div>
+    )
+  }
 
   return (
-    <>
-      <a
-        className="btn btn-google btn-block"
-        href={`/api/auth/google?next=${encodeURIComponent(next)}`}
-      >
-        <Icon.Google />
-        {label}
-      </a>
-      <div className="or">or</div>
-    </>
+    <a className="btn btn-ghost btn-lg btn-block" href={`/api/auth/google?next=${encodeURIComponent(next)}`}>
+      <Icon.Google />
+      {label}
+    </a>
   )
 }

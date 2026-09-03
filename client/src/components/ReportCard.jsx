@@ -1,49 +1,44 @@
 import { Link } from 'react-router-dom'
 import { StatusBadge, PriorityTag, Icon } from './ui'
-import { timeAgo } from '../lib/format'
+import { timeAgo, categoryMeta } from '../lib/format'
 
 export function ReportCard({ report, showReporter = false }) {
+  const meta = categoryMeta(report.category)
+
   return (
-    <Link to={`/reports/${report.id}`} className={`card card-link report-card s-${report.status}`}>
+    <Link to={`/reports/${report.id}`} className="card card-link rc">
       <div className="between" style={{ alignItems: 'flex-start' }}>
-        <div className="row wrap" style={{ gap: 8 }}>
-          <span className="code">#{report.code}</span>
-          <span className="tag">{report.category}</span>
+        <span className="row g-2" style={{ minWidth: 0 }}>
+          <span style={{ fontSize: 19 }} aria-hidden="true">{meta.emoji}</span>
+          <span className="tag">{meta.label}</span>
           <PriorityTag priority={report.priority} />
-        </div>
+        </span>
         <StatusBadge status={report.status} />
       </div>
 
-      <div className="row-top" style={{ gap: 14 }}>
-        <div className="stack g-2" style={{ minWidth: 0, flex: 1 }}>
-          <h3 className="report-title clamp-2">{report.title}</h3>
-          <p className="small muted clamp-2">{report.description}</p>
-        </div>
+      <div className="row-top" style={{ gap: 12 }}>
+        <span className="grow col g-1">
+          <span className="rc-title clamp-2">{report.title}</span>
+          <span className="t-sm muted clamp-2">{report.description}</span>
+        </span>
         {report.photoUrl && (
-          <img src={report.photoUrl} alt="" className="report-thumb" loading="lazy" />
+          <img src={report.photoUrl} alt="" className="rc-thumb" loading="lazy" decoding="async" />
         )}
       </div>
 
-      <div className="report-meta">
+      <div className="rc-meta">
         {report.location && (
-          <span className="meta-item" style={{ maxWidth: '46%' }}>
+          <span className="mi" style={{ maxWidth: '50%' }}>
             <Icon.Pin width={13} height={13} />
             <span className="truncate">{report.location}</span>
           </span>
         )}
-
         {report.comments > 0 && (
-          <span className="meta-item"><Icon.Chat width={13} height={13} />{report.comments}</span>
+          <span className="mi"><Icon.Chat width={13} height={13} />{report.comments}</span>
         )}
-
-        {report.votes > 0 && (
-          <span className="meta-item"><Icon.Up width={13} height={13} />{report.votes}</span>
-        )}
-
-        <span className="spacer" />
-
+        <span className="grow" />
         {showReporter && <span className="truncate">{report.reporterName}</span>}
-        <span className="mono">{timeAgo(report.createdAt)}</span>
+        <span className="code">{timeAgo(report.createdAt)}</span>
       </div>
     </Link>
   )

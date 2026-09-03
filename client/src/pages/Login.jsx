@@ -5,31 +5,30 @@ import { useToast, Icon, Spinner } from '../components/ui'
 import { GoogleButton } from '../components/GoogleButton'
 
 const DEMO = [
-  { role: 'Admin',   email: 'admin@campusfix.app',  password: 'admin1234', note: 'every report' },
-  { role: 'Student', email: 'student.a@campus.edu', password: 'demo1234',  note: 'own reports' },
+  { role: 'Student', email: 'student.a@campus.edu', password: 'demo1234' },
+  { role: 'Admin', email: 'admin@campusfix.app', password: 'admin1234' },
 ]
 
 export function Login() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [searchParams] = useSearchParams()
+  const [params] = useSearchParams()
   const { notify, error: toastError } = useToast()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showEmail, setShowEmail] = useState(false)
 
-  // Google redirects failures back here with a readable reason.
-  const oauthError = searchParams.get('error')
-  useEffect(() => {
-    if (oauthError) toastError(oauthError)
-  }, [oauthError, toastError])
+  // Google bounces failures back here with a readable reason.
+  const oauthError = params.get('error')
+  useEffect(() => { if (oauthError) toastError(oauthError) }, [oauthError, toastError])
 
   if (user) return <Navigate to={location.state?.from || '/'} replace />
 
-  const handleSubmit = async (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     setError('')
     setBusy(true)
@@ -45,66 +44,68 @@ export function Login() {
   }
 
   return (
-    <div className="shell auth-wrap fade-in">
-      <div className="stack g-1" style={{ marginBottom: 24 }}>
-        <h1 className="display" style={{ fontSize: 34 }}>Welcome back</h1>
-        <p className="muted small">Track your reports and see what is being fixed.</p>
+    <div className="wrap-s page auth-page">
+      <div className="col g-2" style={{ marginBottom: 22, textAlign: 'center' }}>
+        <h1 className="t-h1">Welcome back</h1>
+        <p className="muted t-sm">Sign in to report and track campus issues.</p>
       </div>
 
-      <div className="auth-card">
-        <GoogleButton label="Continue with Google" next={location.state?.from || '/'} />
+      <div className="card col g-4">
+        <GoogleButton next={location.state?.from || '/'} />
 
-        <form onSubmit={handleSubmit} noValidate className="stack g-4">
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email" type="email" required autoComplete="email" autoFocus
-              value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password" type="password" required autoComplete="current-password"
-              value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-
-          {error && (
-            <div className="form-error">
-              <Icon.Alert width={15} height={15} style={{ marginTop: 1 }} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <button type="submit" className="btn btn-block" disabled={busy}>
-            {busy ? <><Spinner /> Signing in…</> : 'Log in'}
+        {!showEmail ? (
+          <button className="btn btn-quiet btn-block" onClick={() => setShowEmail(true)}>
+            Use email instead
           </button>
-        </form>
+        ) : (
+          <form onSubmit={submit} className="col g-4" noValidate>
+            <div className="field">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email" type="email" required autoComplete="email" autoFocus
+                value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@campus.edu"
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password" type="password" required autoComplete="current-password"
+                value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+
+            {error && <div className="form-err"><Icon.Alert width={16} height={16} />{error}</div>}
+
+            <button type="submit" className="btn btn-block" disabled={busy}>
+              {busy ? <><Spinner /> Signing in…</> : 'Log in'}
+            </button>
+          </form>
+        )}
       </div>
 
-      <p className="small muted" style={{ marginTop: 18, textAlign: 'center' }}>
-        New here? <Link to="/signup" style={{ color: 'var(--clay)', fontWeight: 550 }}>Create an account</Link>
+      <p className="t-sm muted" style={{ textAlign: 'center', marginTop: 16 }}>
+        New here? <Link to="/signup" style={{ color: 'var(--brand)', fontWeight: 600 }}>Create an account</Link>
       </p>
 
-      <div className="demo-box">
-        <div className="demo-head">
-          <span className="overline">Demo accounts</span>
-          <span className="tiny faint">tap to fill</span>
-        </div>
+      <div className="card col g-2" style={{ marginTop: 18 }}>
+        <span className="overline">Try it without signing up</span>
         {DEMO.map((d) => (
           <button
             key={d.email}
-            type="button"
             className="demo-row"
-            onClick={() => { setEmail(d.email); setPassword(d.password); setError('') }}
+            onClick={() => {
+              setShowEmail(true)
+              setEmail(d.email)
+              setPassword(d.password)
+              setError('')
+            }}
           >
-            <span className="demo-role">{d.role}</span>
-            <span className="code truncate" style={{ flex: 1 }}>{d.email}</span>
-            <span className="tiny faint">sees {d.note}</span>
+            <span className="tag">{d.role}</span>
+            <span className="code grow truncate" style={{ textAlign: 'left' }}>{d.email}</span>
+            <Icon.Next width={15} height={15} />
           </button>
         ))}
       </div>

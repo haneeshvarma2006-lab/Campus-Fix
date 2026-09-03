@@ -16,17 +16,17 @@ function EventLine({ event }) {
       : `Moved to ${STATUS_LABEL[event.toStatus] || event.toStatus}`
 
   return (
-    <div className="timeline-item">
-      <span className={`timeline-dot t-${event.toStatus || 'reported'}`}>
+    <div className="tl-item">
+      <span className={`tl-dot t-${event.toStatus || 'reported'}`}>
         {event.toStatus === 'fixed' && <Icon.Check width={9} height={9} />}
       </span>
-      <div className="stack g-2" style={{ flex: 1, minWidth: 0 }}>
+      <div className="col g-2" style={{ flex: 1, minWidth: 0 }}>
         <div className="row wrap" style={{ gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 550 }}>{label}</span>
-          <span className="tiny faint mono">{formatDateTime(event.createdAt)}</span>
+          <span className="t-xs faint mono">{formatDateTime(event.createdAt)}</span>
         </div>
-        {event.actorName && <span className="tiny faint">by {event.actorName}</span>}
-        {event.note && <p className="timeline-note">{event.note}</p>}
+        {event.actorName && <span className="t-xs faint">by {event.actorName}</span>}
+        {event.note && <p className="tl-note">{event.note}</p>}
       </div>
     </div>
   )
@@ -61,8 +61,8 @@ export function ReportDetail() {
 
   if (loading) {
     return (
-      <div className="shell-wide page">
-        <div className="stack g-3">
+      <div className="wrap page">
+        <div className="col g-3">
           <div className="skeleton" style={{ height: 14, width: 130 }} />
           <div className="skeleton" style={{ height: 32, width: '55%' }} />
           <div className="skeleton" style={{ height: 220, width: '100%' }} />
@@ -73,10 +73,10 @@ export function ReportDetail() {
 
   if (notFound || !data) {
     return (
-      <div className="shell page">
+      <div className="wrap-s page">
         <div className="empty">
           <div className="empty-mark"><Icon.Alert width={20} height={20} /></div>
-          <h3 className="h3">Report unavailable</h3>
+          <h3 className="t-h3">Report unavailable</h3>
           <p>{notFound || 'That report could not be loaded.'}</p>
           <Link to="/reports" className="btn btn-ghost">Back to my reports</Link>
         </div>
@@ -156,14 +156,14 @@ export function ReportDetail() {
   }
 
   return (
-    <div className="shell-wide page fade-in">
+    <div className="wrap page in">
       <Link to={backTo} className="btn btn-quiet btn-sm" style={{ marginBottom: 16, marginLeft: -11 }}>
         <Icon.Back /> {isAdmin ? 'Dashboard' : 'My reports'}
       </Link>
 
-      <div className="detail-grid">
+      <div className="detail">
         {/* --- main column --- */}
-        <div className="stack g-6">
+        <div className="col g-6">
           <div>
             <div className="row wrap" style={{ gap: 9, marginBottom: 12 }}>
               <span className="code">#{report.code}</span>
@@ -172,11 +172,11 @@ export function ReportDetail() {
               <PriorityTag priority={report.priority} />
             </div>
 
-            <h1 className="display" style={{ fontSize: 'clamp(28px, 3.8vw, 40px)', marginBottom: 12 }}>
+            <h1 className="t-h1" style={{ fontSize: 'clamp(28px, 3.8vw, 40px)', marginBottom: 12 }}>
               {report.title}
             </h1>
 
-            <p className="small muted">
+            <p className="t-sm muted">
               Filed by {report.reporterName} · {timeAgo(report.createdAt)}
               {report.updatedAt !== report.createdAt && ` · updated ${timeAgo(report.updatedAt)}`}
             </p>
@@ -188,7 +188,7 @@ export function ReportDetail() {
           </div>
 
           {report.photoUrl && (
-            <img src={report.photoUrl} alt={report.title} className="detail-photo" />
+            <img src={report.photoUrl} alt={report.title} className="detail-img" />
           )}
 
           <div className="card">
@@ -196,22 +196,22 @@ export function ReportDetail() {
           </div>
 
           <div>
-            <h2 className="h2" style={{ marginBottom: 16 }}>History</h2>
+            <h2 className="t-h2" style={{ marginBottom: 16 }}>History</h2>
             <div className="card">
-              <div className="timeline">
+              <div className="tl">
                 {events.map((e) => <EventLine key={e.id} event={e} />)}
               </div>
             </div>
           </div>
 
           <div>
-            <h2 className="h2" style={{ marginBottom: 16 }}>
+            <h2 className="t-h2" style={{ marginBottom: 16 }}>
               Comments {comments.length > 0 && <span className="faint" style={{ fontWeight: 400 }}>· {comments.length}</span>}
             </h2>
 
-            <div className="stack g-4">
+            <div className="col g-4">
               {comments.length === 0 && (
-                <p className="small muted">
+                <p className="t-sm muted">
                   No comments yet. The reporter and the maintenance team can talk here.
                 </p>
               )}
@@ -219,18 +219,18 @@ export function ReportDetail() {
               {comments.map((c) => (
                 <div key={c.id} className="row-top" style={{ gap: 12 }}>
                   <Avatar name={c.authorName} src={c.authorAvatar} size="avatar-sm" />
-                  <div className="stack g-2" style={{ flex: 1, minWidth: 0 }}>
+                  <div className="col g-2" style={{ flex: 1, minWidth: 0 }}>
                     <div className="row wrap" style={{ gap: 8 }}>
                       <strong style={{ fontSize: 13.5 }}>{c.authorName}</strong>
-                      {c.authorRole === 'admin' && <span className="role-pill">Admin</span>}
-                      <span className="tiny faint mono">{timeAgo(c.createdAt)}</span>
+                      {c.authorRole === 'admin' && <span className="pill-role">Admin</span>}
+                      <span className="t-xs faint mono">{timeAgo(c.createdAt)}</span>
                     </div>
                     <div className="comment-body">{c.body}</div>
                   </div>
                 </div>
               ))}
 
-              <form onSubmit={addComment} className="stack g-2">
+              <form onSubmit={addComment} className="col g-2">
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
@@ -240,7 +240,7 @@ export function ReportDetail() {
                   style={{ minHeight: 84, resize: 'vertical' }}
                 />
                 <div className="row">
-                  <span className="char-count">{comment.length}/2000</span>
+                  <span className="count">{comment.length}/2000</span>
                   <span className="spacer" />
                   <button type="submit" className="btn btn-sm" disabled={busy || !comment.trim()}>
                     Post comment
@@ -252,9 +252,9 @@ export function ReportDetail() {
         </div>
 
         {/* --- side column --- */}
-        <aside className="stack g-4 sticky-side">
+        <aside className="col g-4 side">
           <div className="card">
-            <h3 className="h3" style={{ marginBottom: 12 }}>Details</h3>
+            <h3 className="t-h3" style={{ marginBottom: 12 }}>Details</h3>
             <dl style={{ margin: 0 }}>
               <div className="kv"><dt>Reference</dt><dd className="mono">#{report.code}</dd></div>
               <div className="kv"><dt>Stage</dt><dd>{STATUS_LABEL[report.status]}</dd></div>
@@ -291,8 +291,8 @@ export function ReportDetail() {
 
           {isAdmin && (
             <div className="card">
-              <h3 className="h3" style={{ marginBottom: 4 }}>Update</h3>
-              <p className="tiny faint" style={{ marginBottom: 14 }}>
+              <h3 className="t-h3" style={{ marginBottom: 4 }}>Update</h3>
+              <p className="t-xs faint" style={{ marginBottom: 14 }}>
                 Visible to the reporter as soon as you save it.
               </p>
 

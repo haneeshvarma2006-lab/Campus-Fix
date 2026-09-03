@@ -11,21 +11,19 @@ export function Signup() {
 
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [error, setError] = useState('')
-  const [field, setField] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showEmail, setShowEmail] = useState(false)
 
-  if (user) return <Navigate to="/dashboard" replace />
+  if (user) return <Navigate to="/" replace />
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
-  const handleSubmit = async (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     setError('')
-    setField('')
 
     if (form.password.length < 8) {
       setError('Use a password of at least 8 characters.')
-      setField('password')
       return
     }
 
@@ -34,76 +32,63 @@ export function Signup() {
       const account = await signup(form)
       notify(
         account.role === 'admin'
-          ? 'Account created — you are the first user, so you have admin access.'
+          ? "You're the first account here, so you have admin access."
           : 'Account created. Welcome to CampusFix.'
       )
-      navigate(account.role === 'admin' ? '/admin' : '/dashboard', { replace: true })
+      navigate('/', { replace: true })
     } catch (err) {
       setError(err.message)
-      setField(err.field || '')
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <div className="shell auth-wrap fade-in">
-      <div className="stack g-1" style={{ marginBottom: 24 }}>
-        <h1 className="display" style={{ fontSize: 34 }}>Create an account</h1>
-        <p className="muted small">Sign up to file and track issue reports.</p>
+    <div className="wrap-s page auth-page">
+      <div className="col g-2" style={{ marginBottom: 22, textAlign: 'center' }}>
+        <h1 className="t-h1">Join CampusFix</h1>
+        <p className="muted t-sm">Report campus problems and follow them until they&rsquo;re fixed.</p>
       </div>
 
-      <div className="auth-card">
-        <GoogleButton label="Sign up with Google" next="/dashboard" />
+      <div className="card col g-4">
+        <GoogleButton label="Sign up with Google" next="/" />
 
-        <form onSubmit={handleSubmit} noValidate className="stack g-4">
-          <div className="field">
-            <label htmlFor="name">Name</label>
-            <input
-              id="name" type="text" required autoComplete="name" autoFocus
-              value={form.name} onChange={set('name')} placeholder="Your full name"
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email" type="email" required autoComplete="email"
-              value={form.email} onChange={set('email')} placeholder="you@college.edu"
-              aria-invalid={field === 'email' || undefined}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password" type="password" required autoComplete="new-password"
-              value={form.password} onChange={set('password')} placeholder="At least 8 characters"
-              aria-invalid={field === 'password' || undefined}
-            />
-            <span className="field-hint">Stored hashed with bcrypt — never in plain text.</span>
-          </div>
-
-          {error && (
-            <div className="form-error">
-              <Icon.Alert width={15} height={15} style={{ marginTop: 1 }} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <button type="submit" className="btn btn-block" disabled={busy}>
-            {busy ? <><Spinner /> Creating account…</> : 'Create account'}
+        {!showEmail ? (
+          <button className="btn btn-quiet btn-block" onClick={() => setShowEmail(true)}>
+            Use email instead
           </button>
-        </form>
+        ) : (
+          <form onSubmit={submit} className="col g-4" noValidate>
+            <div className="field">
+              <label htmlFor="name">Name</label>
+              <input id="name" required autoComplete="name" autoFocus
+                     value={form.name} onChange={set('name')} placeholder="Your name" />
+            </div>
+
+            <div className="field">
+              <label htmlFor="email">Email</label>
+              <input id="email" type="email" required autoComplete="email"
+                     value={form.email} onChange={set('email')} placeholder="you@campus.edu" />
+            </div>
+
+            <div className="field">
+              <label htmlFor="password">Password</label>
+              <input id="password" type="password" required autoComplete="new-password"
+                     value={form.password} onChange={set('password')} placeholder="At least 8 characters" />
+              <span className="hint">Stored hashed with bcrypt, never in plain text.</span>
+            </div>
+
+            {error && <div className="form-err"><Icon.Alert width={16} height={16} />{error}</div>}
+
+            <button type="submit" className="btn btn-block" disabled={busy}>
+              {busy ? <><Spinner /> Creating…</> : 'Create account'}
+            </button>
+          </form>
+        )}
       </div>
 
-      <p className="small muted" style={{ marginTop: 18, textAlign: 'center' }}>
-        Already have an account? <Link to="/login" style={{ color: 'var(--clay)', fontWeight: 550 }}>Log in</Link>
-      </p>
-
-      <p className="tiny faint" style={{ marginTop: 18, textAlign: 'center', lineHeight: 1.65 }}>
-        New accounts are students. Admin access is granted by an existing admin — except on a
-        brand-new install, where the first account becomes the admin.
+      <p className="t-sm muted" style={{ textAlign: 'center', marginTop: 16 }}>
+        Already have an account? <Link to="/login" style={{ color: 'var(--brand)', fontWeight: 600 }}>Log in</Link>
       </p>
     </div>
   )

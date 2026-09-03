@@ -28,6 +28,17 @@ const STATEMENTS = [
      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
    )`,
 
+  // Places on campus, so reporting is a tap rather than typing an address.
+  // zone groups them on the map; x/y position the pin on the campus plan.
+  `CREATE TABLE IF NOT EXISTS locations (
+     id         SERIAL PRIMARY KEY,
+     name       TEXT        NOT NULL UNIQUE,
+     zone       TEXT        NOT NULL DEFAULT 'Campus',
+     x          REAL        NOT NULL DEFAULT 50,
+     y          REAL        NOT NULL DEFAULT 50,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
+
   `CREATE TABLE IF NOT EXISTS reports (
      id          SERIAL PRIMARY KEY,
      code        TEXT        NOT NULL UNIQUE,

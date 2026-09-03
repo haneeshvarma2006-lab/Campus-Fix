@@ -14,6 +14,7 @@ import { describeDatabase } from './db.js'
 import authRoutes from './routes/auth.js'
 import reportRoutes from './routes/reports.js'
 import categoryRoutes from './routes/categories.js'
+import locationRoutes from './routes/locations.js'
 import userRoutes from './routes/users.js'
 import statsRoutes from './routes/stats.js'
 
@@ -80,6 +81,7 @@ export function createApp() {
   app.use('/api/auth', authRoutes)
   app.use('/api/reports', reportRoutes)
   app.use('/api/categories', categoryRoutes)
+  app.use('/api/locations', locationRoutes)
   app.use('/api/users', userRoutes)
   app.use('/api/stats', statsRoutes)
 

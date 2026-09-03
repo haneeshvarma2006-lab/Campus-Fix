@@ -344,6 +344,46 @@ async function run() {
       studentStats.data.total < adminStats.data.total)
   }
 
+  group('Campus locations')
+  {
+    const list = await api('/locations', { token: student })
+    check('students can list locations', list.status === 200 && list.data.locations.length > 0)
+
+    const withCounts = list.data.locations.every(
+      (l) => typeof l.open_count === 'number' && typeof l.total_count === 'number'
+    )
+    check('each location carries live issue counts', withCounts)
+
+    const positioned = list.data.locations.every(
+      (l) => typeof l.x === 'number' && typeof l.y === 'number'
+    )
+    check('each location has map coordinates', positioned)
+
+    check('students cannot add a location',
+      (await api('/locations', { method: 'POST', token: student, body: { name: 'Secret Lab' } })).status === 403)
+
+    const created = await api('/locations', {
+      method: 'POST', token: admin, body: { name: 'Test Wing', zone: 'Academic', x: 40, y: 40 },
+    })
+    check('admin adds a location', created.status === 201)
+
+    const dup = await api('/locations', { method: 'POST', token: admin, body: { name: 'test wing' } })
+    check('duplicate location rejected case-insensitively', dup.status === 409)
+
+    const offGrid = await api('/locations', {
+      method: 'POST', token: admin, body: { name: 'Off Grid', x: 500, y: 40 },
+    })
+    check('out-of-range coordinates rejected', offGrid.status === 400)
+
+    // Filtering the queue by place is what the campus map is built on.
+    const atCanteen = await api('/reports?location=Canteen', { token: admin })
+    check('reports filter by location',
+      atCanteen.data.reports.length > 0 && atCanteen.data.reports.every((r) => r.location === 'Canteen'))
+
+    check('location removed',
+      (await api(`/locations/${created.data.location.id}`, { method: 'DELETE', token: admin })).status === 200)
+  }
+
   group('Admin management')
   {
     const add = await api('/categories', { method: 'POST', token: admin, body: { name: 'Waste segregation' } })

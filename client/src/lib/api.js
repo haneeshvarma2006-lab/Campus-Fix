@@ -80,9 +80,12 @@ export const api = {
   comment: (id, body) => request(`/reports/${id}/comments`, { method: 'POST', body }),
 
   listCategories: (signal) => request('/categories', { signal }),
-  listLocations: (signal) => request('/categories/locations', { signal }),
   addCategory: (body) => request('/categories', { method: 'POST', body }),
   deleteCategory: (id) => request(`/categories/${id}`, { method: 'DELETE' }),
+
+  listLocations: (signal) => request('/locations', { signal }),
+  addLocation: (body) => request('/locations', { method: 'POST', body }),
+  deleteLocation: (id) => request(`/locations/${id}`, { method: 'DELETE' }),
 
   listUsers: (signal) => request('/users', { signal }),
   setRole: (id, body) => request(`/users/${id}/role`, { method: 'PATCH', body }),

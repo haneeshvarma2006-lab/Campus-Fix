@@ -42,10 +42,10 @@ export function MyReports() {
   }
 
   return (
-    <div className="shell-wide page fade-in">
+    <div className="wrap page in">
       <div className="between wrap page-head">
         <div>
-          <h1 className="display" style={{ fontSize: 'clamp(28px, 3.6vw, 38px)' }}>My reports</h1>
+          <h1 className="t-h1" style={{ fontSize: 'clamp(28px, 3.6vw, 38px)' }}>My reports</h1>
           <p className="lede">
             {data.total === 0 ? 'Nothing here yet.' : `${data.total} report${data.total === 1 ? '' : 's'} filed. Track where each one stands.`}
           </p>
@@ -87,7 +87,7 @@ export function MyReports() {
       )}
 
       {!loading && data.reports.length > 0 && (
-        <div className="grid-reports">
+        <div className="reports">
           {data.reports.map((r) => <ReportCard key={r.id} report={r} />)}
         </div>
       )}
@@ -97,7 +97,7 @@ export function MyReports() {
           <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             Previous
           </button>
-          <span className="small muted mono">Page {data.page} of {data.pages}</span>
+          <span className="t-sm muted mono">Page {data.page} of {data.pages}</span>
           <button className="btn btn-ghost btn-sm" disabled={page >= data.pages} onClick={() => setPage((p) => p + 1)}>
             Next
           </button>

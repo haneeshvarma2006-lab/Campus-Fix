@@ -79,6 +79,14 @@ export const categorySchema = z.object({
   name: z.string().trim().min(2, 'Category names need at least 2 characters.').max(60),
 })
 
+export const locationSchema = z.object({
+  name: z.string().trim().min(2, 'Location names need at least 2 characters.').max(60),
+  zone: z.string().trim().min(1).max(40).default('Campus'),
+  // Percentage coordinates on the campus plan.
+  x: z.coerce.number().min(0).max(100).default(50),
+  y: z.coerce.number().min(0).max(100).default(50),
+})
+
 export const roleSchema = z.object({
   role: z.enum(ROLES),
 })

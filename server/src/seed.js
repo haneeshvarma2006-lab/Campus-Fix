@@ -15,9 +15,29 @@ import { hashPassword } from './auth.js'
 
 const force = process.argv.includes('--force')
 
+// The list a student picks from. Kept short and in the words students use,
+// rather than the words a maintenance department would use.
 const CATEGORIES = [
-  'Sanitation', 'Electrical', 'Plumbing', 'Road damage',
-  'Streetlight', 'Water supply', 'Furniture', 'Safety',
+  'Electricity', 'Water', 'Wi-Fi', 'Cleanliness', 'Classroom',
+  'Hostel', 'Washroom', 'Furniture', 'Safety', 'Other',
+]
+
+/**
+ * Places on the campus plan. x/y are percentages on a 100x100 grid, laid out to
+ * read like a real site plan: gate at the bottom, academic core in the middle,
+ * hostels up one side.
+ */
+const LOCATIONS = [
+  { name: 'Main Gate',      zone: 'Entrance', x: 50, y: 88 },
+  { name: 'Academic Block', zone: 'Academic', x: 34, y: 44 },
+  { name: 'Lab Block',      zone: 'Academic', x: 62, y: 38 },
+  { name: 'Library',        zone: 'Academic', x: 48, y: 22 },
+  { name: 'Canteen',        zone: 'Common',   x: 72, y: 62 },
+  { name: 'Sports Ground',  zone: 'Common',   x: 20, y: 72 },
+  { name: 'Auditorium',     zone: 'Common',   x: 68, y: 78 },
+  { name: 'Hostel A',       zone: 'Hostel',   x: 14, y: 26 },
+  { name: 'Hostel B',       zone: 'Hostel',   x: 14, y: 46 },
+  { name: 'Parking',        zone: 'Entrance', x: 82, y: 88 },
 ]
 
 const USERS = [
@@ -29,31 +49,31 @@ const USERS = [
 ]
 
 const REPORTS = [
-  { title: 'Overflowing bin outside Block C', category: 'Sanitation', location: 'Block C', status: 'in_progress', priority: 'high', days: 2,
+  { title: 'Overflowing bin outside the canteen', category: 'Cleanliness', location: 'Canteen', status: 'in_progress', priority: 'high', days: 2,
     description: 'The bin next to the side entrance has not been cleared in about four days. Waste is spilling onto the walkway and there are flies around it in the afternoon.' },
-  { title: 'Corridor light flickering on second floor', category: 'Electrical', location: 'Academic Block', status: 'reported', priority: 'normal', days: 1,
+  { title: 'Corridor light flickering on second floor', category: 'Electricity', location: 'Academic Block', status: 'reported', priority: 'normal', days: 1,
     description: 'The third tube light from the stairwell flickers constantly and goes fully dark for a few seconds at a time. Hard to read notices on that wall in the evening.' },
-  { title: 'Tap leaking continuously in washroom', category: 'Plumbing', location: 'Hostel B', status: 'fixed', priority: 'normal', days: 9,
+  { title: 'Tap leaking continuously in washroom', category: 'Washroom', location: 'Hostel B', status: 'fixed', priority: 'normal', days: 9,
     description: 'The second tap from the left does not shut off completely. It has been running at a steady trickle all week, which is a lot of water over a day.' },
-  { title: 'Large pothole near the main gate', category: 'Road damage', location: 'Main Gate', status: 'assigned', priority: 'urgent', days: 3,
+  { title: 'Large pothole near the main gate', category: 'Other', location: 'Main Gate', status: 'assigned', priority: 'urgent', days: 3,
     description: 'A pothole roughly two feet across has opened up right where two-wheelers turn in. Someone nearly went down on it this morning during the rain.' },
-  { title: 'Streetlight out along the back path', category: 'Streetlight', location: 'Library', status: 'in_progress', priority: 'high', days: 5,
+  { title: 'Streetlight out along the back path', category: 'Safety', location: 'Library', status: 'in_progress', priority: 'high', days: 5,
     description: 'Two consecutive lights on the back path are dead, leaving about forty metres completely dark. It is the route most people take back after evening classes.' },
-  { title: 'No water supply in hostel since morning', category: 'Water supply', location: 'Hostel A', status: 'fixed', priority: 'urgent', days: 12,
+  { title: 'No water supply in hostel since morning', category: 'Water', location: 'Hostel A', status: 'fixed', priority: 'urgent', days: 12,
     description: 'Supply stopped around 6am with no notice. Nothing on any of the floors, including the ground-floor washrooms.' },
   { title: 'Broken chair in seminar room', category: 'Furniture', location: 'Academic Block', status: 'reported', priority: 'low', days: 6,
     description: 'One of the chairs in the second row has a cracked backrest and wobbles badly. It should be pulled out before someone leans back on it.' },
   { title: 'Fire extinguisher missing from its bracket', category: 'Safety', location: 'Lab Block', status: 'assigned', priority: 'urgent', days: 4,
     description: 'The bracket by the landing is empty. The extinguisher has been gone for at least a week and there is no replacement anywhere on that floor.' },
-  { title: 'Drain blocked behind the canteen', category: 'Sanitation', location: 'Canteen', status: 'in_progress', priority: 'high', days: 2,
+  { title: 'Drain blocked behind the canteen', category: 'Cleanliness', location: 'Canteen', status: 'in_progress', priority: 'high', days: 2,
     description: 'Water has been pooling behind the canteen for days and smells strongly. The drain cover looks clogged with food waste.' },
-  { title: 'Ceiling fan making loud noise', category: 'Electrical', location: 'Academic Block', status: 'rejected', priority: 'low', days: 15,
+  { title: 'Ceiling fan making loud noise', category: 'Electricity', location: 'Academic Block', status: 'rejected', priority: 'low', days: 15,
     description: 'The fan closest to the window rattles loudly whenever it runs above speed three.' },
-  { title: 'Loose paving stone on the walkway', category: 'Road damage', location: 'Main Gate', status: 'reported', priority: 'normal', days: 1,
+  { title: 'Loose paving stone on the walkway', category: 'Other', location: 'Main Gate', status: 'reported', priority: 'normal', days: 1,
     description: 'One of the paving stones rocks when you step on it and the edge is raised about an inch. Easy thing to trip on when carrying things.' },
   { title: 'Washroom door latch broken', category: 'Furniture', location: 'Library', status: 'fixed', priority: 'normal', days: 20,
     description: 'The latch on the second stall does not engage at all, so the door swings open on its own.' },
-  { title: 'Water cooler not cooling on third floor', category: 'Water supply', location: 'Hostel B', status: 'assigned', priority: 'normal', days: 3,
+  { title: 'Water cooler not cooling on third floor', category: 'Water', location: 'Hostel B', status: 'assigned', priority: 'normal', days: 3,
     description: 'The cooler runs but the water comes out at room temperature. It has been like this since the weekend.' },
   { title: 'Broken window pane in the stairwell', category: 'Safety', location: 'Hostel A', status: 'reported', priority: 'high', days: 1,
     description: 'A pane on the half-landing is cracked right through and a piece has already fallen out. Glass edges are at hand height.' },
@@ -113,7 +133,7 @@ async function main() {
 
   if (force) {
     // Truncating in one statement handles the foreign keys for us.
-    await query('TRUNCATE votes, comments, report_events, reports, categories, users RESTART IDENTITY CASCADE')
+    await query('TRUNCATE votes, comments, report_events, reports, categories, locations, users RESTART IDENTITY CASCADE')
     console.log('Cleared existing data.')
   }
 
@@ -132,6 +152,13 @@ async function main() {
   await transaction(async (client) => {
     for (const name of CATEGORIES) {
       await client.query('INSERT INTO categories (name) VALUES ($1) ON CONFLICT DO NOTHING', [name])
+    }
+
+    for (const l of LOCATIONS) {
+      await client.query(
+        'INSERT INTO locations (name, zone, x, y) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
+        [l.name, l.zone, l.x, l.y]
+      )
     }
 
     const userIds = {}

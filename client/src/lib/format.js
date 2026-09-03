@@ -33,6 +33,45 @@ export const PRIORITY_LABEL = {
   urgent: 'Urgent',
 }
 
+/** Maps a status to its CSS colour variable, so SVG and CSS stay in step. */
+export const STATUS_COLOR_VAR = {
+  reported: 'var(--reported)',
+  assigned: 'var(--assigned)',
+  in_progress: 'var(--progress)',
+  fixed: 'var(--fixed)',
+  rejected: 'var(--rejected)',
+}
+
+/**
+ * The categories a student picks from when reporting. Emoji rather than icons:
+ * zero bytes to download, instantly recognisable, and they render everywhere.
+ * `name` must match a row in the categories table.
+ */
+export const CATEGORY_META = {
+  Electricity: { emoji: '🔌', label: 'Electricity' },
+  Water:       { emoji: '🚰', label: 'Water' },
+  'Wi-Fi':     { emoji: '📶', label: 'Wi-Fi' },
+  Cleanliness: { emoji: '🧹', label: 'Cleanliness' },
+  Classroom:   { emoji: '🏫', label: 'Classroom' },
+  Hostel:      { emoji: '🛏️', label: 'Hostel' },
+  Washroom:    { emoji: '🚿', label: 'Washroom' },
+  Furniture:   { emoji: '🪑', label: 'Furniture' },
+  Safety:      { emoji: '🦺', label: 'Safety' },
+  Other:       { emoji: '🔧', label: 'Other' },
+}
+
+/** Falls back gracefully for a category an admin added later. */
+export const categoryMeta = (name) =>
+  CATEGORY_META[name] || { emoji: '🔧', label: name }
+
+export const ZONE_EMOJI = {
+  Academic: '🏫',
+  Hostel: '🛏️',
+  Common: '🌳',
+  Entrance: '🚪',
+  Campus: '📍',
+}
+
 export const ROLE_LABEL = {
   student: 'Student',
   admin: 'Admin',

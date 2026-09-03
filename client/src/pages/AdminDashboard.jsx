@@ -22,8 +22,8 @@ function TrendCard({ trend }) {
   return (
     <div className="card chart-card">
       <div className="between" style={{ marginBottom: 14 }}>
-        <h3 className="h3" style={{ fontSize: 14 }}>Reports filed</h3>
-        <span className="tiny faint">{total} in 14 days</span>
+        <h3 className="t-h3" style={{ fontSize: 14 }}>Reports filed</h3>
+        <span className="t-xs faint">{total} in 14 days</span>
       </div>
       <div className="trend">
         {trend.map((t) => (
@@ -51,9 +51,9 @@ function BreakdownCard({ title, rows, labelKey, onPick, activeValue }) {
   const max = Math.max(1, ...rows.map((r) => r.count))
   return (
     <div className="card">
-      <h3 className="h3" style={{ fontSize: 14, marginBottom: 14 }}>{title}</h3>
-      <div className="stack g-3">
-        {rows.length === 0 && <p className="small muted">Nothing yet.</p>}
+      <h3 className="t-h3" style={{ fontSize: 14, marginBottom: 14 }}>{title}</h3>
+      <div className="col g-3">
+        {rows.length === 0 && <p className="t-sm muted">Nothing yet.</p>}
         {rows.map((r) => {
           const label = r[labelKey]
           const isActive = activeValue === label
@@ -66,8 +66,8 @@ function BreakdownCard({ title, rows, labelKey, onPick, activeValue }) {
               style={{ width: '100%', textAlign: 'left' }}
             >
               <span
-                className="bar-label small truncate"
-                style={{ fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--clay)' : undefined }}
+                className="bar-label t-sm truncate"
+                style={{ fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--brand)' : undefined }}
               >
                 {label}
               </span>
@@ -147,10 +147,10 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="shell-wide page fade-in">
+    <div className="wrap page in">
       <div className="between wrap page-head">
         <div>
-          <h1 className="display" style={{ fontSize: 'clamp(30px, 4vw, 42px)' }}>Dashboard</h1>
+          <h1 className="t-h1" style={{ fontSize: 'clamp(30px, 4vw, 42px)' }}>Dashboard</h1>
           <p className="lede">
             {stats
               ? `${stats.total} report${stats.total === 1 ? '' : 's'} in total · ${stats.openCount} still needing attention.`
@@ -161,7 +161,7 @@ export function AdminDashboard() {
       </div>
 
       {/* --- stage counts, each one a filter --- */}
-      <div className="stat-grid" style={{ marginBottom: 14 }}>
+      <div className="stats" style={{ marginBottom: 14 }}>
         {tiles.map((t) => (
           <button
             key={t.key}
@@ -170,31 +170,31 @@ export function AdminDashboard() {
             title={`Filter by ${t.label.toLowerCase()}`}
             style={{ textAlign: 'left' }}
           >
-            <div className="stat-value">{t.value ?? '—'}</div>
-            <div className="stat-label"><span className="badge-dot" />{t.label}</div>
+            <div className="stat-n">{t.value ?? '—'}</div>
+            <div className="stat-l"><span className="dot" />{t.label}</div>
           </button>
         ))}
       </div>
 
-      <div className="stat-grid" style={{ marginBottom: 26 }}>
+      <div className="stats" style={{ marginBottom: 26 }}>
         <div className="stat">
-          <div className="stat-value">{stats ? `${stats.fixRate}%` : '—'}</div>
-          <div className="stat-label"><Icon.Check width={13} height={13} />Fix rate</div>
+          <div className="stat-n">{stats ? `${stats.fixRate}%` : '—'}</div>
+          <div className="stat-l"><Icon.Check width={13} height={13} />Fix rate</div>
         </div>
         <div className="stat">
-          <div className="stat-value">{stats ? formatHours(stats.avgFixHours) : '—'}</div>
-          <div className="stat-label"><Icon.Clock width={13} height={13} />Avg time to fix</div>
+          <div className="stat-n">{stats ? formatHours(stats.avgFixHours) : '—'}</div>
+          <div className="stat-l"><Icon.Clock width={13} height={13} />Avg time to fix</div>
         </div>
         <div className="stat">
-          <div className="stat-value">
+          <div className="stat-n">
             {stats?.oldestOpenDays ?? '—'}
             {stats?.oldestOpenDays != null && <span style={{ fontSize: 18 }}>d</span>}
           </div>
-          <div className="stat-label"><Icon.Alert width={13} height={13} />Oldest still open</div>
+          <div className="stat-l"><Icon.Alert width={13} height={13} />Oldest still open</div>
         </div>
         <div className="stat">
-          <div className="stat-value">{stats?.openCount ?? '—'}</div>
-          <div className="stat-label"><Icon.Inbox width={13} height={13} />Active queue</div>
+          <div className="stat-n">{stats?.openCount ?? '—'}</div>
+          <div className="stat-l"><Icon.Inbox width={13} height={13} />Active queue</div>
         </div>
       </div>
 
@@ -202,7 +202,7 @@ export function AdminDashboard() {
       {stats && (
         <div className="chart-grid" style={{ marginBottom: 30 }}>
           <TrendCard trend={stats.trend} />
-          <div className="stack g-4">
+          <div className="col g-4">
             <BreakdownCard
               title="By category"
               rows={stats.byCategory}
@@ -224,7 +224,7 @@ export function AdminDashboard() {
       {/* --- filters --- */}
       <div className="toolbar" style={{ marginBottom: 22 }}>
         <div className="row wrap" style={{ gap: 8 }}>
-          <span className="input-icon" style={{ minWidth: 220 }}>
+          <span className="search-wrap" style={{ minWidth: 220 }}>
             <Icon.Search width={15} height={15} />
             <input
               className="input"
@@ -242,7 +242,9 @@ export function AdminDashboard() {
           <select className="input" style={{ width: 190 }} value={location} onChange={(e) => update({ location: e.target.value })}>
             <option value="all">All locations</option>
             {locations.map((l) => (
-              <option key={l.location} value={l.location}>{l.location} ({l.report_count})</option>
+              <option key={l.id} value={l.name}>
+                {l.name}{l.total_count > 0 ? ` (${l.total_count})` : ''}
+              </option>
             ))}
           </select>
 
@@ -276,7 +278,7 @@ export function AdminDashboard() {
       </div>
 
       {!loading && (
-        <p className="small muted" style={{ marginBottom: 14 }}>
+        <p className="t-sm muted" style={{ marginBottom: 14 }}>
           {data.total === 0 ? 'No matches' : `Showing ${data.reports.length} of ${data.total}`}
           {location !== 'all' && ` at ${location}`}
           {q && ` for “${q}”`}
@@ -295,7 +297,7 @@ export function AdminDashboard() {
       )}
 
       {!loading && data.reports.length > 0 && (
-        <div className="grid-reports">
+        <div className="reports">
           {data.reports.map((r) => <ReportCard key={r.id} report={r} showReporter />)}
         </div>
       )}
@@ -305,7 +307,7 @@ export function AdminDashboard() {
           <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             Previous
           </button>
-          <span className="small muted mono">Page {data.page} of {data.pages}</span>
+          <span className="t-sm muted mono">Page {data.page} of {data.pages}</span>
           <button className="btn btn-ghost btn-sm" disabled={page >= data.pages} onClick={() => setPage((p) => p + 1)}>
             Next
           </button>

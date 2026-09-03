@@ -47,7 +47,7 @@ export function AuthCallback() {
   }, [adoptToken, navigate, notify, toastError])
 
   return (
-    <div className="shell auth-wrap">
+    <div className="wrap-s auth-wrap">
       <div className="card row" style={{ justifyContent: 'center', gap: 12, padding: 34 }}>
         <Spinner />
         <span className="muted">{message}</span>
