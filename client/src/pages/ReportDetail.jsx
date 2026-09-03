@@ -17,7 +17,7 @@ function EventLine({ event }) {
 
   return (
     <div className="tl-item">
-      <span className={`tl-dot t-${event.toStatus || 'reported'}`}>
+      <span className={`tl-dot ${event.toStatus || 'reported'}`}>
         {event.toStatus === 'fixed' && <Icon.Check width={9} height={9} />}
       </span>
       <div className="col g-2" style={{ flex: 1, minWidth: 0 }}>
@@ -63,9 +63,9 @@ export function ReportDetail() {
     return (
       <div className="wrap page">
         <div className="col g-3">
-          <div className="skeleton" style={{ height: 14, width: 130 }} />
-          <div className="skeleton" style={{ height: 32, width: '55%' }} />
-          <div className="skeleton" style={{ height: 220, width: '100%' }} />
+          <div className="skel" style={{ height: 14, width: 130 }} />
+          <div className="skel" style={{ height: 32, width: '55%' }} />
+          <div className="skel" style={{ height: 220, width: '100%' }} />
         </div>
       </div>
     )
@@ -241,7 +241,7 @@ export function ReportDetail() {
                 />
                 <div className="row">
                   <span className="count">{comment.length}/2000</span>
-                  <span className="spacer" />
+                  <span className="grow" />
                   <button type="submit" className="btn btn-sm" disabled={busy || !comment.trim()}>
                     Post comment
                   </button>
@@ -315,7 +315,7 @@ export function ReportDetail() {
                 {STATUSES.map((s) => (
                   <button
                     key={s}
-                    className={`chip ${report.status === s ? 'active' : ''}`}
+                    className={`chip ${report.status === s ? 'on' : ''}`}
                     disabled={busy}
                     onClick={() => changeStatus(s)}
                   >

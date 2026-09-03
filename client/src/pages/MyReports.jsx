@@ -50,7 +50,7 @@ export function MyReports() {
             {data.total === 0 ? 'Nothing here yet.' : `${data.total} report${data.total === 1 ? '' : 's'} filed. Track where each one stands.`}
           </p>
         </div>
-        <Link to="/submit" className="btn btn-clay">
+        <Link to="/submit" className="btn">
           <Icon.Plus width={15} height={15} /> Report an issue
         </Link>
       </div>
@@ -59,7 +59,7 @@ export function MyReports() {
         {FILTERS.map((f) => (
           <button
             key={f.id}
-            className={`chip ${status === f.id ? 'active' : ''}`}
+            className={`chip ${status === f.id ? 'on' : ''}`}
             onClick={() => setStatus(f.id)}
           >
             {f.label}
@@ -80,7 +80,7 @@ export function MyReports() {
           }
           action={
             status === 'all'
-              ? <Link to="/submit" className="btn btn-clay">Report your first issue</Link>
+              ? <Link to="/submit" className="btn">Report your first issue</Link>
               : <button className="btn btn-ghost" onClick={() => setStatus('all')}>Show all</button>
           }
         />

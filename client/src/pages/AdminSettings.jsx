@@ -139,7 +139,7 @@ function People() {
       </p>
 
       {loading ? (
-        <div className="skeleton" style={{ height: 180 }} />
+        <div className="skel" style={{ height: 180 }} />
       ) : (
         <div className="table-wrap">
           <table>
@@ -159,9 +159,9 @@ function People() {
                     <span style={{ fontWeight: 550 }}>{u.name}</span>
                     {u.id === user?.id && <span className="t-xs muted"> · you</span>}
                   </td>
-                  <td className="muted small">{u.email}</td>
-                  <td className="mono small" style={{ textAlign: 'right' }}>{u.reportCount}</td>
-                  <td className="muted small">{formatDate(u.createdAt)}</td>
+                  <td className="muted t-xs">{u.email}</td>
+                  <td className="mono t-xs" style={{ textAlign: 'right' }}>{u.reportCount}</td>
+                  <td className="muted t-xs">{formatDate(u.createdAt)}</td>
                   <td>
                     <select
                       className="input"
@@ -205,7 +205,7 @@ export function AdminSettings() {
 
       <div className="col g-6">
         <Categories />
-        <hr className="divider" style={{ margin: 0 }} />
+        <hr className="sep" style={{ margin: 0 }} />
         <People />
       </div>
     </div>

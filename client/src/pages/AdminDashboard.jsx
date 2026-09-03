@@ -257,14 +257,14 @@ export function AdminDashboard() {
         </div>
 
         <div className="row wrap" style={{ gap: 7 }}>
-          <button className={`chip ${status === 'all' ? 'active' : ''}`} onClick={() => update({ status: 'all' })}>
+          <button className={`chip ${status === 'all' ? 'on' : ''}`} onClick={() => update({ status: 'all' })}>
             All
           </button>
-          <button className={`chip ${status === 'active' ? 'active' : ''}`} onClick={() => update({ status: 'active' })}>
+          <button className={`chip ${status === 'active' ? 'on' : ''}`} onClick={() => update({ status: 'active' })}>
             Still open{stats && <span className="chip-count">{stats.openCount}</span>}
           </button>
           {STATUSES.map((s) => (
-            <button key={s} className={`chip ${status === s ? 'active' : ''}`} onClick={() => update({ status: s })}>
+            <button key={s} className={`chip ${status === s ? 'on' : ''}`} onClick={() => update({ status: s })}>
               {STATUS_LABEL[s]}{stats && <span className="chip-count">{stats.counts[s]}</span>}
             </button>
           ))}

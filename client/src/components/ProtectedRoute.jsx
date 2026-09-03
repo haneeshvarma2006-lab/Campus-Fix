@@ -3,10 +3,10 @@ import { useAuth } from '../contexts/AuthContext'
 
 function Loading() {
   return (
-    <div className="shell page">
-      <div className="stack stack-3">
-        <div className="skeleton" style={{ height: 26, width: 200 }} />
-        <div className="skeleton" style={{ height: 14, width: 320 }} />
+    <div className="wrap page">
+      <div className="col g-3">
+        <div className="skel" style={{ height: 26, width: 200 }} />
+        <div className="skel" style={{ height: 14, width: 320 }} />
       </div>
     </div>
   )
