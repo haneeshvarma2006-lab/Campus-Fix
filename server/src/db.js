@@ -14,7 +14,52 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const ROOT = path.resolve(__dirname, '..')
 
-const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || ''
+const rawConnectionString = (process.env.DATABASE_URL || process.env.POSTGRES_URL || '').trim()
+
+/**
+ * Managed Postgres dashboards offer several different snippets and it is easy
+ * to copy the wrong one. Catching that here with an explanation beats letting
+ * node-postgres fail later with "getaddrinfo ENOTFOUND base".
+ */
+function validateConnectionString(value) {
+  if (!value) return ''
+
+  const unquoted = value.replace(/^['"]|['"]$/g, '').trim()
+
+  if (/^psql\b/i.test(unquoted)) {
+    throw new Error([
+      'DATABASE_URL looks like a psql command, not a connection string.',
+      '  In your database dashboard pick the "Connection string" (URI) option —',
+      '  it starts with postgresql:// and includes a username, password and host.',
+    ].join('\n'))
+  }
+
+  if (!/^postgres(ql)?:\/\//.test(unquoted)) {
+    const preview = unquoted.slice(0, 24) + (unquoted.length > 24 ? '…' : '')
+    throw new Error([
+      `DATABASE_URL must start with postgresql:// — got "${preview}".`,
+      '  Leave it empty to use the built-in local database instead.',
+    ].join('\n'))
+  }
+
+  let url
+  try {
+    url = new URL(unquoted)
+  } catch {
+    throw new Error('DATABASE_URL is not a valid URL. Check for stray spaces or line breaks.')
+  }
+
+  if (!url.username || !url.password) {
+    throw new Error([
+      'DATABASE_URL is missing a username or password.',
+      '  Copy the whole connection string, including the credentials before the @.',
+    ].join('\n'))
+  }
+
+  return unquoted
+}
+
+const connectionString = validateConnectionString(rawConnectionString)
 
 export const usingRemote = Boolean(connectionString)
 export const describeDatabase = () =>
