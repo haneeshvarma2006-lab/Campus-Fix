@@ -103,7 +103,9 @@ export function createApp() {
     res.status(problems.length ? 503 : 200).json({
       ok: problems.length === 0,
       database: describeDatabase(),
-      storage: usingBlob ? 'Vercel Blob' : 'not configured',
+      storage: usingBlob
+        ? (process.env.BLOB_READ_WRITE_TOKEN ? 'Vercel Blob (token)' : 'Vercel Blob (OIDC)')
+        : 'not configured',
       email: mail.isConfigured ? 'Resend' : 'not configured',
       problems,
       uptime: process.uptime(),
