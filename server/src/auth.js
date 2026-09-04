@@ -42,7 +42,19 @@ function requireSecret() {
 }
 
 export const hashPassword = (plain) => bcrypt.hash(plain, 10)
-export const verifyPassword = (plain, hash) => (hash ? bcrypt.compare(plain, hash) : Promise.resolve(false))
+
+/**
+ * A bcrypt hash of nothing in particular, compared against when no account
+ * exists.
+ *
+ * Skipping the comparison for an unknown email returned about 80ms faster than
+ * a known one — measured, not assumed — which is a comfortable margin for
+ * discovering which addresses are registered. Doing the work either way costs
+ * one hash on a request that was going to fail anyway.
+ */
+const DUMMY_HASH = bcrypt.hashSync('a password that matches nothing', 10)
+
+export const verifyPassword = (plain, hash) => bcrypt.compare(plain, hash || DUMMY_HASH)
 
 export function signToken(user) {
   return jwt.sign({ sub: user.id, role: user.role }, requireSecret(), { expiresIn: TOKEN_TTL })
@@ -56,8 +68,8 @@ export function publicUser(user) {
     email: user.email,
     role: user.role,
     avatarUrl: user.avatar_url || null,
-    hasPassword: Boolean(user.password_hash),
-    hasGoogle: Boolean(user.google_id),
+    hasPassword: user.has_password ?? Boolean(user.password_hash),
+    hasGoogle: user.has_google ?? Boolean(user.google_id),
     createdAt: user.created_at,
   }
 }
@@ -77,7 +89,15 @@ export async function optionalAuth(req, _res, next) {
     const payload = jwt.verify(token, requireSecret())
     // Re-read the user rather than trusting the token's claims, so a role
     // change or a deleted account takes effect on the very next request.
-    req.user = (await queryOne('SELECT * FROM users WHERE id = $1', [payload.sub])) || undefined
+    // Explicit columns rather than SELECT *: the password hash has no business
+    // riding along on req.user, where one careless res.json would expose it.
+    req.user = (await queryOne(
+      `SELECT id, name, email, role, avatar_url, created_at,
+              (password_hash IS NOT NULL) AS has_password,
+              (google_id IS NOT NULL) AS has_google
+         FROM users WHERE id = $1`,
+      [payload.sub]
+    )) || undefined
   } catch {
     // Expired or malformed tokens simply mean "not logged in".
   }

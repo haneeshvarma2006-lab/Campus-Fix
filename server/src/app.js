@@ -35,9 +35,45 @@ export function createApp() {
   app.use(helmet({
     // Photos may be served from a Blob CDN on a different origin.
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-    contentSecurityPolicy: false,
+    /*
+     * A real policy rather than `false`. Scripts and API calls are same-origin
+     * only, so an injected <script src> or a beacon to somebody else's server
+     * is refused by the browser even if markup ever escaped React's escaping.
+     *
+     * 'unsafe-inline' is present for styles alone: the components carry inline
+     * style attributes, which this governs. Scripts get no such exemption,
+     * which is the half that matters.
+     */
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        // data: for inline SVG, blob: for the local preview of a photo the
+        // student just picked, https: for the Blob CDN and Google avatars.
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        upgradeInsecureRequests: [],
+      },
+    },
   }))
-  app.use(cors({ origin: process.env.CORS_ORIGIN || true, credentials: false }))
+
+  /*
+   * The frontend is served from this same origin, so nothing legitimate needs
+   * a cross-origin grant. Reflecting every origin was harmless only because
+   * the token lives in localStorage and no cookie is sent — a thin margin to
+   * rely on. Production allows nothing unless CORS_ORIGIN names it.
+   */
+  const corsOrigin = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : process.env.NODE_ENV === 'production' ? false : true
+  app.use(cors({ origin: corsOrigin, credentials: false }))
   app.use(express.json({ limit: '1mb' }))
   app.use(express.urlencoded({ extended: true }))
 
@@ -88,7 +124,13 @@ export function createApp() {
   // CDN and never reach this function.
   if (fs.existsSync(CLIENT_DIST)) {
     app.use(express.static(CLIENT_DIST))
-    app.get('*', (_req, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')))
+    // A bare `app.use` rather than `app.get('*')`: Express 5 moved to
+    // path-to-regexp v8, where a lone '*' is no longer a valid pattern. This
+    // form means the same thing and holds across both majors.
+    app.use((req, res, next) => {
+      if (req.method !== 'GET') return next()
+      res.sendFile(path.join(CLIENT_DIST, 'index.html'))
+    })
   } else {
     app.get('/', (_req, res) =>
       res.type('text/plain').send(

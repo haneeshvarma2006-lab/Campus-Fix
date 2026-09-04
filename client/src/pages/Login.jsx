@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast, Icon, Spinner } from '../components/ui'
+import { safeNext } from '../lib/format'
 import { GoogleButton } from '../components/GoogleButton'
 
 const DEMO = [
@@ -26,7 +27,7 @@ export function Login() {
   const oauthError = params.get('error')
   useEffect(() => { if (oauthError) toastError(oauthError) }, [oauthError, toastError])
 
-  if (user) return <Navigate to={location.state?.from || '/'} replace />
+  if (user) return <Navigate to={safeNext(location.state?.from)} replace />
 
   const submit = async (e) => {
     e.preventDefault()
@@ -35,7 +36,7 @@ export function Login() {
     try {
       const account = await login({ email, password })
       notify(`Welcome back, ${account.name.split(' ')[0]}.`)
-      navigate(location.state?.from || '/', { replace: true })
+      navigate(safeNext(location.state?.from), { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -51,7 +52,7 @@ export function Login() {
       </div>
 
       <div className="card col g-4">
-        <GoogleButton next={location.state?.from || '/'} />
+        <GoogleButton next={safeNext(location.state?.from)} />
 
         {!showEmail ? (
           <button className="btn btn-quiet btn-block" onClick={() => setShowEmail(true)}>

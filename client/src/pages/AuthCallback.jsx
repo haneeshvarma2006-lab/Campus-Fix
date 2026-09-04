@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast, Spinner } from '../components/ui'
+import { safeNext } from '../lib/format'
 
 /**
  * Lands here after Google sends the browser back. The token arrives in the URL
@@ -23,7 +24,9 @@ export function AuthCallback() {
 
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     const token = params.get('token')
-    const next = params.get('next') || '/'
+    // Anyone can write this fragment, so it is only ever trusted as far as
+    // a path inside this app.
+    const next = safeNext(params.get('next'))
 
     window.history.replaceState(null, '', window.location.pathname)
 

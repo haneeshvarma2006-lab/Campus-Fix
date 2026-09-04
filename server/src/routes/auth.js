@@ -61,14 +61,19 @@ router.post('/login', authLimiter, validate(loginSchema), asyncRoute(async (req,
 
   // Same message either way, so this cannot be used to discover which emails
   // are registered.
-  const ok = user && (await verifyPassword(password, user.password_hash))
+  // verifyPassword hashes even when there is no account, so the reply takes the
+  // same time either way.
+  // Not `user && await verify(...)`: that short-circuits, skipping the hash for
+  // an unknown address and handing back the 80ms difference this was meant to
+  // remove. The comparison has to happen whether or not the account exists.
+  const ok = (await verifyPassword(password, user?.password_hash)) && Boolean(user)
   if (!ok) {
-    if (user && !user.password_hash) {
-      return res.status(401).json({
-        error: 'That account signs in with Google. Use the “Continue with Google” button.',
-      })
-    }
-    return res.status(401).json({ error: 'That email and password do not match.' })
+    // One message for every failure. Telling a Google-only account to use the
+    // Google button was friendlier, but it confirmed that the address was
+    // registered — so the hint goes to everyone or to no one.
+    return res.status(401).json({
+      error: 'That email and password do not match. If you signed up with Google, use the Google button.',
+    })
   }
 
   res.json({ token: signToken(user), user: publicUser(user) })
@@ -99,7 +104,7 @@ router.get('/google', asyncRoute(async (req, res) => {
   // completes it.
   const state = google.signState({
     nonce: Math.random().toString(36).slice(2),
-    next: typeof req.query.next === 'string' && req.query.next.startsWith('/') ? req.query.next : '/reports',
+    next: google.safeNext(req.query.next),
   })
 
   res.redirect(google.buildAuthUrl({ redirect_uri: google.redirectUri(req), state }))

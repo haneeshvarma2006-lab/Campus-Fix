@@ -143,3 +143,24 @@ export function dayLabel(isoDay) {
   const d = parseDate(`${isoDay}T00:00:00Z`)
   return d ? d.toLocaleDateString(undefined, { weekday: 'narrow' }) : ''
 }
+
+/**
+ * Restricts a post-sign-in redirect to somewhere inside this app.
+ *
+ * The Google callback reads its destination from the URL fragment, which
+ * anyone can write. Without this, a crafted sign-in link could hand someone a
+ * genuine session and then drop them on a page of somebody else's choosing —
+ * the moment they are most likely to trust what they see.
+ *
+ * Anything that is not a single-slash path is refused, which covers the
+ * protocol-relative `//evil.example` and the backslash forms browsers quietly
+ * normalise into it.
+ */
+export function safeNext(value, fallback = '/') {
+  if (typeof value !== 'string' || value.length === 0) return fallback
+  const path = value.replace(new RegExp('\\\\', 'g'), '/')
+  if (!path.startsWith('/')) return fallback
+  if (path.startsWith('//')) return fallback
+  if (/^\/+[a-zA-Z][a-zA-Z\d+\-.]*:/.test(path)) return fallback
+  return path
+}

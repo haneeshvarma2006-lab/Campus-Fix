@@ -131,3 +131,19 @@ export async function fetchProfile(accessToken) {
     avatarUrl: profile.picture || null,
   }
 }
+
+/**
+ * Restricts the post-sign-in destination to a path inside this app.
+ *
+ * `startsWith('/')` was not enough: `//evil.example` and the backslash forms
+ * browsers normalise into it both begin with a slash and both leave the site.
+ * The value is signed into the OAuth state and reflected back to the browser,
+ * so it has to be safe before it is trusted, not after.
+ */
+export function safeNext(value, fallback = '/reports') {
+  if (typeof value !== 'string' || value.length === 0) return fallback
+  const path = value.replace(new RegExp('\\\\', 'g'), '/')
+  if (!path.startsWith('/') || path.startsWith('//')) return fallback
+  if (/^\/+[a-zA-Z][a-zA-Z\d+\-.]*:/.test(path)) return fallback
+  return path
+}
