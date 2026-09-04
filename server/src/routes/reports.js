@@ -3,6 +3,7 @@ import { query, queryOne, transaction } from '../db.js'
 import { requireAuth, requireRole, isAdmin, asyncRoute } from '../auth.js'
 import { ACTIVE, CLOSED, PRIORITY_RANK } from '../domain.js'
 import { photoUpload, savePhoto, deletePhoto } from '../storage.js'
+import { sendMail, statusChangeEmail } from '../mail.js'
 import {
   validate, reportSchema, statusSchema, prioritySchema, commentSchema, listQuerySchema,
 } from '../validate.js'
@@ -269,6 +270,15 @@ router.patch('/:id/status', requireRole('admin'), validate(statusSchema),
         from: report.status, to: status, note: note || null,
       })
     })
+
+    // The reporter hears about it, but only once the change is safely
+    // committed, and never at the cost of the response: a mail failure is
+    // logged inside sendMail and goes no further.
+    const reporter = await queryOne('SELECT email FROM users WHERE id = $1', [report.reporter_id])
+    if (reporter?.email && status !== report.status) {
+      const message = statusChangeEmail({ report, status, note })
+      void sendMail({ to: reporter.email, ...message })
+    }
 
     res.json({ report: toReport(await getReport(report.id, req.user.id)) })
   })

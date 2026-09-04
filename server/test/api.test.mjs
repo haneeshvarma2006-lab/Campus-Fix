@@ -66,6 +66,9 @@ async function run() {
     check('advertises whether photos can be attached',
       typeof providers.data.photoUploads === 'boolean',
       `photoUploads=${providers.data.photoUploads}`)
+    check('advertises whether email is configured',
+      typeof providers.data.email === 'boolean',
+      `email=${providers.data.email}`)
   }
 
   group('Authentication')

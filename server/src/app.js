@@ -10,6 +10,7 @@ import rateLimit from 'express-rate-limit'
 import { optionalAuth, asyncRoute } from './auth.js'
 import { configProblems } from './health.js'
 import { UPLOAD_DIR, usingBlob, localUploadsAvailable } from './storage.js'
+import * as mail from './mail.js'
 import { describeDatabase } from './db.js'
 import authRoutes from './routes/auth.js'
 import reportRoutes from './routes/reports.js'
@@ -73,6 +74,7 @@ export function createApp() {
       ok: problems.length === 0,
       database: describeDatabase(),
       storage: usingBlob ? 'Vercel Blob' : localUploadsAvailable ? 'local disk' : 'not configured',
+      email: mail.isConfigured ? 'Resend' : 'not configured',
       problems,
       uptime: process.uptime(),
     })

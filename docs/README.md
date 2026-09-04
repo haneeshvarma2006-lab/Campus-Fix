@@ -12,6 +12,7 @@ Short docs. Read in any order.
 | 6 | [🔐 Google Login Setup](6-GOOGLE-LOGIN-SETUP.md) | 5-minute setup guide |
 | 7 | [🌏 Regions & Speed](7-REGIONS-AND-SPEED.md) | Where it runs, how to move it to Mumbai |
 | 8 | [🎨 The Design Plan](8-DESIGN-PLAN.md) | Why it looks the way it does |
+| 9 | [📧 Email Setup](9-EMAIL-SETUP.md) | Status-change notifications |
 
 ---
 
