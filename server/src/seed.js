@@ -28,17 +28,31 @@ const CATEGORIES = [
  * read like a real site plan: gate at the bottom, academic core in the middle,
  * hostels up one side.
  */
+/**
+ * Real blocks, not a generic campus.
+ *
+ * The previous list was invented — "Academic Block", "Lab Block" — to suit a
+ * drawn map that assumed one campus layout. Every college is laid out
+ * differently, so the map went and these became what a student actually says
+ * out loud: a block number and what is in it. Admins edit this list in
+ * Settings, so another college can replace it without touching code.
+ */
 const LOCATIONS = [
-  { name: 'Main Gate',      zone: 'Entrance', x: 50, y: 88 },
-  { name: 'Academic Block', zone: 'Academic', x: 34, y: 44 },
-  { name: 'Lab Block',      zone: 'Academic', x: 62, y: 38 },
-  { name: 'Library',        zone: 'Academic', x: 48, y: 22 },
-  { name: 'Canteen',        zone: 'Common',   x: 72, y: 62 },
-  { name: 'Sports Ground',  zone: 'Common',   x: 20, y: 72 },
-  { name: 'Auditorium',     zone: 'Common',   x: 68, y: 78 },
-  { name: 'Hostel A',       zone: 'Hostel',   x: 14, y: 26 },
-  { name: 'Hostel B',       zone: 'Hostel',   x: 14, y: 46 },
-  { name: 'Parking',        zone: 'Entrance', x: 82, y: 88 },
+  { name: '1st Block',              zone: 'Academic' },
+  { name: '2nd Block — Admin',      zone: 'Administration' },
+  { name: '3rd Block — CSM',        zone: 'Academic' },
+  { name: '4th Block — Mech & Civil', zone: 'Academic' },
+  { name: '5th Block — SAC',        zone: 'Common' },
+  { name: '6th Block — MCA & MBA',  zone: 'Academic' },
+  { name: '7th Block — ECE',        zone: 'Academic' },
+  { name: '8th Block — IT',         zone: 'Academic' },
+  { name: '9th Block — ECE',        zone: 'Academic' },
+  { name: '10th Block — CSE',       zone: 'Academic' },
+  { name: 'Cafeteria',              zone: 'Common' },
+  { name: 'Boys Hostel',            zone: 'Hostel' },
+  { name: 'Girls Hostel',           zone: 'Hostel' },
+  { name: 'Main Gate',              zone: 'Campus' },
+  { name: 'Parking',                zone: 'Campus' },
 ]
 
 /**
@@ -67,33 +81,33 @@ const USERS = [
 ]
 
 const REPORTS = [
-  { title: 'Overflowing bin outside the canteen', category: 'Cleanliness', location: 'Canteen', status: 'in_progress', priority: 'high', days: 2,
+  { title: 'Overflowing bin outside the canteen', category: 'Cleanliness', location: 'Cafeteria', status: 'in_progress', priority: 'high', days: 2,
     description: 'The bin next to the side entrance has not been cleared in about four days. Waste is spilling onto the walkway and there are flies around it in the afternoon.' },
-  { title: 'Corridor light flickering on second floor', category: 'Electricity', location: 'Academic Block', status: 'reported', priority: 'normal', days: 1,
+  { title: 'Corridor light flickering on second floor', category: 'Electricity', location: '3rd Block — CSM', status: 'reported', priority: 'normal', days: 1,
     description: 'The third tube light from the stairwell flickers constantly and goes fully dark for a few seconds at a time. Hard to read notices on that wall in the evening.' },
-  { title: 'Tap leaking continuously in washroom', category: 'Washroom', location: 'Hostel B', status: 'fixed', priority: 'normal', days: 9,
+  { title: 'Tap leaking continuously in washroom', category: 'Washroom', location: 'Girls Hostel', status: 'fixed', priority: 'normal', days: 9,
     description: 'The second tap from the left does not shut off completely. It has been running at a steady trickle all week, which is a lot of water over a day.' },
   { title: 'Large pothole near the main gate', category: 'Other', location: 'Main Gate', status: 'assigned', priority: 'urgent', days: 3,
     description: 'A pothole roughly two feet across has opened up right where two-wheelers turn in. Someone nearly went down on it this morning during the rain.' },
-  { title: 'Streetlight out along the back path', category: 'Safety', location: 'Library', status: 'in_progress', priority: 'high', days: 5,
+  { title: 'Streetlight out along the back path', category: 'Safety', location: '1st Block', status: 'in_progress', priority: 'high', days: 5,
     description: 'Two consecutive lights on the back path are dead, leaving about forty metres completely dark. It is the route most people take back after evening classes.' },
-  { title: 'No water supply in hostel since morning', category: 'Water', location: 'Hostel A', status: 'fixed', priority: 'urgent', days: 12,
+  { title: 'No water supply in hostel since morning', category: 'Water', location: 'Boys Hostel', status: 'fixed', priority: 'urgent', days: 12,
     description: 'Supply stopped around 6am with no notice. Nothing on any of the floors, including the ground-floor washrooms.' },
-  { title: 'Broken chair in seminar room', category: 'Furniture', location: 'Academic Block', status: 'reported', priority: 'low', days: 6,
+  { title: 'Broken chair in seminar room', category: 'Furniture', location: '3rd Block — CSM', status: 'reported', priority: 'low', days: 6,
     description: 'One of the chairs in the second row has a cracked backrest and wobbles badly. It should be pulled out before someone leans back on it.' },
-  { title: 'Fire extinguisher missing from its bracket', category: 'Safety', location: 'Lab Block', status: 'assigned', priority: 'urgent', days: 4,
+  { title: 'Fire extinguisher missing from its bracket', category: 'Safety', location: '10th Block — CSE', status: 'assigned', priority: 'urgent', days: 4,
     description: 'The bracket by the landing is empty. The extinguisher has been gone for at least a week and there is no replacement anywhere on that floor.' },
-  { title: 'Drain blocked behind the canteen', category: 'Cleanliness', location: 'Canteen', status: 'in_progress', priority: 'high', days: 2,
+  { title: 'Drain blocked behind the canteen', category: 'Cleanliness', location: 'Cafeteria', status: 'in_progress', priority: 'high', days: 2,
     description: 'Water has been pooling behind the canteen for days and smells strongly. The drain cover looks clogged with food waste.' },
-  { title: 'Ceiling fan making loud noise', category: 'Electricity', location: 'Academic Block', status: 'rejected', priority: 'low', days: 15,
+  { title: 'Ceiling fan making loud noise', category: 'Electricity', location: '3rd Block — CSM', status: 'rejected', priority: 'low', days: 15,
     description: 'The fan closest to the window rattles loudly whenever it runs above speed three.' },
   { title: 'Loose paving stone on the walkway', category: 'Other', location: 'Main Gate', status: 'reported', priority: 'normal', days: 1,
     description: 'One of the paving stones rocks when you step on it and the edge is raised about an inch. Easy thing to trip on when carrying things.' },
-  { title: 'Washroom door latch broken', category: 'Furniture', location: 'Library', status: 'fixed', priority: 'normal', days: 20,
+  { title: 'Washroom door latch broken', category: 'Furniture', location: '1st Block', status: 'fixed', priority: 'normal', days: 20,
     description: 'The latch on the second stall does not engage at all, so the door swings open on its own.' },
-  { title: 'Water cooler not cooling on third floor', category: 'Water', location: 'Hostel B', status: 'assigned', priority: 'normal', days: 3,
+  { title: 'Water cooler not cooling on third floor', category: 'Water', location: 'Girls Hostel', status: 'assigned', priority: 'normal', days: 3,
     description: 'The cooler runs but the water comes out at room temperature. It has been like this since the weekend.' },
-  { title: 'Broken window pane in the stairwell', category: 'Safety', location: 'Hostel A', status: 'reported', priority: 'high', days: 1,
+  { title: 'Broken window pane in the stairwell', category: 'Safety', location: 'Boys Hostel', status: 'reported', priority: 'high', days: 1,
     description: 'A pane on the half-landing is cracked right through and a piece has already fallen out. Glass edges are at hand height.' },
 ]
 
@@ -174,8 +188,8 @@ async function main() {
 
     for (const l of LOCATIONS) {
       await client.query(
-        'INSERT INTO locations (name, zone, x, y) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-        [l.name, l.zone, l.x, l.y]
+        'INSERT INTO locations (name, zone) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [l.name, l.zone]
       )
     }
 

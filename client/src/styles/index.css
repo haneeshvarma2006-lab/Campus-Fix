@@ -588,34 +588,6 @@ select.input, .field select {
 .track-labels span:last-child { text-align: right; }
 .track-labels span.on { color: var(--ink); }
 
-/* --- campus map ------------------------------------------------------------ */
-
-.map-frame {
-  position: relative;
-  border-radius: var(--r-3);
-  border: 1px solid var(--line);
-  background: var(--ground);
-  overflow: hidden;
-}
-
-.map-svg { display: block; width: 100%; height: auto; }
-
-.map-pin { cursor: pointer; transition: transform .15s var(--ease); transform-origin: center; transform-box: fill-box; }
-.map-pin:hover { transform: scale(1.18); }
-
-.map-legend {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
-  border-top: 1px solid var(--line);
-  background: var(--surface);
-  font-size: 12.5px;
-  color: var(--ink-3);
-}
-.map-legend .k { display: inline-flex; align-items: center; gap: 6px; }
-.map-legend .sw { width: 9px; height: 9px; border-radius: 50%; }
-
 /* --- stats ----------------------------------------------------------------- */
 
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
@@ -826,7 +798,6 @@ tr:last-child td { border-bottom: none; }
   .landing-hero { grid-template-columns: minmax(0, 1fr); gap: 24px; }
 }
 
-.landing-map { box-shadow: var(--sh-2); }
 
 .steps-grid {
   display: grid;
@@ -1175,3 +1146,73 @@ button.stat:hover { border-color: var(--line-2); background: var(--sunken); }
 .menu-item svg { flex-shrink: 0; }
 .menu-item.danger { color: var(--danger); }
 .menu-item.danger:hover { background: var(--danger-bg); }
+
+/* --- blocks and the landing board ------------------------------------------ */
+/* These replaced the drawn campus map. A map assumes one campus layout; a list
+   of blocks is what students actually say, and it works at any college. */
+
+.place-list { gap: 7px; }
+
+.place-name { display: block; font-weight: 600; font-size: 14.5px; }
+
+/* Length compares blocks faster than a second number does. */
+.place-bar {
+  display: block;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--inset);
+  overflow: hidden;
+}
+.place-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ink-5);
+  transition: width .3s var(--ease);
+}
+.place.has-open .place-bar > span { background: var(--reported); }
+.place.has-open { border-color: color-mix(in srgb, var(--reported) 26%, var(--line)); }
+
+.place > svg:last-child { color: var(--ink-5); flex-shrink: 0; }
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  box-shadow: var(--sh-2);
+}
+.board-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+
+.board-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-1);
+  background: var(--sunken);
+  font-size: 14px;
+  font-weight: 550;
+}
+.board-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* --- entrance motion -------------------------------------------------------- */
+/* Transform and opacity only — the two properties a GPU composites for free.
+   Nothing loops; each element animates once and is then static. */
+
+@keyframes rise {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rise {
+  animation: rise .34s var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise { animation: none; }
+}

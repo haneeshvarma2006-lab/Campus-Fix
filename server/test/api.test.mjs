@@ -396,10 +396,15 @@ async function run() {
     })
     check('out-of-range coordinates rejected', offGrid.status === 400)
 
-    // Filtering the queue by place is what the campus map is built on.
-    const atCanteen = await api('/reports?location=Canteen', { token: admin })
+    // Filtering the queue by block is what the Campus page is built on. The
+    // block is taken from real data rather than named here, so renaming one in
+    // the seed cannot quietly turn this into a test of an empty result.
+    const anyReport = (await api('/reports?limit=1', { token: admin })).data.reports[0]
+    const place = anyReport.location
+    const atPlace = await api(`/reports?location=${encodeURIComponent(place)}`, { token: admin })
     check('reports filter by location',
-      atCanteen.data.reports.length > 0 && atCanteen.data.reports.every((r) => r.location === 'Canteen'))
+      atPlace.data.reports.length > 0 && atPlace.data.reports.every((r) => r.location === place),
+      place)
 
     check('location removed',
       (await api(`/locations/${created.data.location.id}`, { method: 'DELETE', token: admin })).status === 200)

@@ -68,6 +68,7 @@ export const ZONE_EMOJI = {
   Academic: '🏫',
   Hostel: '🛏️',
   Common: '🌳',
+  Administration: '🗂️',
   Entrance: '🚪',
   Campus: '📍',
 }

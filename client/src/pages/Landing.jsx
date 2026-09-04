@@ -1,23 +1,22 @@
 import { Link } from 'react-router-dom'
-import { CampusMap } from '../components/CampusMap'
 import { Icon } from '../components/ui'
 import { categoryMeta } from '../lib/format'
 
 /**
- * A snapshot of a campus, so the map has something to show before anyone signs
- * in. Deliberately static: the landing page makes no API calls, so it renders
- * instantly on a cold visit over mobile data.
+ * A snapshot of a board, so the hero has something true to show before anyone
+ * signs in. Deliberately static: the landing page makes no API calls, so it
+ * renders instantly on a cold visit over mobile data.
+ *
+ * This replaced a drawn campus map. A map has to assume one campus layout, and
+ * no two colleges share one — blocks are what students actually say.
  */
-const DEMO_PINS = [
-  { id: 1, name: 'Main Gate',      x: 50, y: 88, open_count: 2 },
-  { id: 2, name: 'Academic Block', x: 34, y: 44, open_count: 3 },
-  { id: 3, name: 'Lab Block',      x: 62, y: 38, open_count: 1 },
-  { id: 4, name: 'Library',        x: 48, y: 22, open_count: 0 },
-  { id: 5, name: 'Canteen',        x: 72, y: 62, open_count: 2 },
-  { id: 6, name: 'Sports Ground',  x: 20, y: 72, open_count: 0 },
-  { id: 7, name: 'Auditorium',     x: 68, y: 78, open_count: 0 },
-  { id: 8, name: 'Hostel A',       x: 14, y: 26, open_count: 1 },
-  { id: 9, name: 'Hostel B',       x: 14, y: 46, open_count: 1 },
+const DEMO_BLOCKS = [
+  { name: '10th Block — CSE',  open: 3, status: 'reported' },
+  { name: '6th Block — MCA',   open: 2, status: 'in_progress' },
+  { name: 'Girls Hostel',      open: 2, status: 'assigned' },
+  { name: '4th Block — Mech',  open: 1, status: 'reported' },
+  { name: '2nd Block — Admin', open: 0, status: 'fixed' },
+  { name: 'Cafeteria',         open: 0, status: 'fixed' },
 ]
 
 const QUICK_CATEGORIES = [
@@ -65,18 +64,21 @@ export function Landing() {
             </p>
           </div>
 
-          <div className="map-frame landing-map">
-            <CampusMap locations={DEMO_PINS} compact />
-            <div className="map-legend">
-              <span className="k">
-                <span className="sw" style={{ background: 'var(--reported)' }} />
-                Open
-              </span>
-              <span className="k">
-                <span className="sw" style={{ background: 'var(--fixed)' }} />
-                All clear
-              </span>
+          <div className="board" aria-label="Example board of campus blocks">
+            <div className="board-head">
+              <span className="overline">Live on campus</span>
+              <span className="t-xs faint">example</span>
             </div>
+
+            {DEMO_BLOCKS.map((b, i) => (
+              <div key={b.name} className="board-row rise" style={{ animationDelay: `${i * 55}ms` }}>
+                <span className="board-dot" style={{ background: `var(--${b.status})` }} />
+                <span className="grow truncate">{b.name}</span>
+                <span className={`badge s-${b.status}`}>
+                  {b.open > 0 ? `${b.open} open` : 'Clear'}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </section>

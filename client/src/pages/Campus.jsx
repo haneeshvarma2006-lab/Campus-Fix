@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
-import { CampusMap, MapLegend } from '../components/CampusMap'
 import { ReportCard } from '../components/ReportCard'
 import { CardSkeleton, EmptyState, Icon, useToast } from '../components/ui'
 import { ZONE_EMOJI } from '../lib/format'
 
 /**
- * The campus at a glance: every location with its open count, and the reports
- * behind whichever one you tap. One request for the map, one for the reports
- * of the selected place — nothing loads until it is needed.
+ * Every block on campus, grouped the way people talk about them.
+ *
+ * This used to be a drawn map. A map has to assume one campus layout, and no
+ * two colleges share one — so it was decoration everywhere except the campus it
+ * was drawn for. A list of blocks is honest about what it knows, works for any
+ * college, and answers the question a student actually has faster: where are
+ * the problems right now.
  */
+
+const ZONE_ORDER = ['Academic', 'Hostel', 'Common', 'Administration', 'Campus']
+
 export function Campus() {
   const { error: toastError } = useToast()
 
@@ -41,6 +47,61 @@ export function Campus() {
   }, [selected, toastError])
 
   const totalOpen = locations.reduce((n, l) => n + Number(l.open_count || 0), 0)
+  const busiest = Math.max(1, ...locations.map((l) => Number(l.open_count || 0)))
+
+  // Grouped by zone, and within a zone the blocks needing attention come first.
+  const zones = useMemo(() => {
+    const byZone = new Map()
+    for (const l of locations) {
+      if (!byZone.has(l.zone)) byZone.set(l.zone, [])
+      byZone.get(l.zone).push(l)
+    }
+    for (const list of byZone.values()) {
+      list.sort((a, b) => Number(b.open_count || 0) - Number(a.open_count || 0))
+    }
+    return [...byZone.entries()].sort(
+      (a, b) => (ZONE_ORDER.indexOf(a[0]) + 99) % 99 - (ZONE_ORDER.indexOf(b[0]) + 99) % 99
+    )
+  }, [locations])
+
+  if (selected) {
+    return (
+      <div className="wrap page">
+        <button className="btn btn-quiet btn-sm" onClick={() => setSelected(null)} style={{ marginLeft: -10 }}>
+          <Icon.Back /> All blocks
+        </button>
+
+        <div className="page-head" style={{ marginTop: 12 }}>
+          <h1 className="t-h1">{selected.name}</h1>
+          <p className="muted t-sm" style={{ marginTop: 4 }}>
+            {ZONE_EMOJI[selected.zone] || '📍'} {selected.zone} &middot;{' '}
+            {selected.open_count} open &middot; {selected.fixed_count} fixed
+          </p>
+        </div>
+
+        {loadingReports && <CardSkeleton count={2} />}
+
+        {!loadingReports && reports.length === 0 && (
+          <EmptyState
+            icon={Icon.Check}
+            title="All clear here"
+            message={`Nothing open at ${selected.name} right now.`}
+            action={<Link to="/submit" className="btn btn-ghost btn-sm">Report something</Link>}
+          />
+        )}
+
+        {!loadingReports && reports.length > 0 && (
+          <div className="reports">
+            {reports.map((r, i) => (
+              <div key={r.id} className="rise" style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}>
+                <ReportCard report={r} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="wrap page">
@@ -48,77 +109,62 @@ export function Campus() {
         <h1 className="t-h1">Campus</h1>
         <p className="muted t-sm" style={{ marginTop: 4 }}>
           {loading
-            ? 'Loading the map…'
-            : `${totalOpen} open ${totalOpen === 1 ? 'issue' : 'issues'} across ${locations.length} places.`}
+            ? 'Loading blocks…'
+            : totalOpen === 0
+              ? `All clear across ${locations.length} blocks.`
+              : `${totalOpen} open ${totalOpen === 1 ? 'issue' : 'issues'} across ${locations.length} blocks.`}
         </p>
       </div>
 
-      {loading ? (
-        <div className="skel" style={{ aspectRatio: '1 / 1', maxHeight: 460, borderRadius: 18 }} />
-      ) : (
-        <div className="map-frame">
-          <CampusMap
-            locations={locations}
-            selected={selected?.name}
-            onSelect={(l) => setSelected((cur) => (cur?.name === l.name ? null : l))}
-          />
-          <MapLegend />
+      {loading && (
+        <div className="col g-2">
+          {Array.from({ length: 8 }, (_, i) => (
+            <div key={i} className="skel" style={{ height: 58, borderRadius: 12 }} />
+          ))}
         </div>
       )}
 
-      {/* Tapping a pin opens what is happening there. */}
-      {selected && (
-        <div className="col g-3 in" style={{ marginTop: 20 }}>
-          <div className="between">
-            <div>
-              <h2 className="t-h2">
-                {ZONE_EMOJI[selected.zone] || '📍'} {selected.name}
-              </h2>
-              <p className="muted t-sm">
-                {selected.open_count} open &middot; {selected.fixed_count} fixed
-              </p>
-            </div>
-            <button className="icon-btn" onClick={() => setSelected(null)} aria-label="Close">
-              <Icon.Back />
-            </button>
-          </div>
+      {!loading && zones.map(([zone, list]) => (
+        <section key={zone} className="col g-2" style={{ marginBottom: 22 }}>
+          <span className="overline">{ZONE_EMOJI[zone] || '📍'} {zone}</span>
 
-          {loadingReports && <CardSkeleton count={2} />}
-
-          {!loadingReports && reports.length === 0 && (
-            <EmptyState
-              icon={Icon.Check}
-              title="All clear here"
-              message={`Nothing open at ${selected.name} right now.`}
-              action={<Link to="/submit" className="btn btn-ghost btn-sm">Report something</Link>}
-            />
-          )}
-
-          {!loadingReports && reports.length > 0 && (
-            <div className="reports">
-              {reports.map((r) => <ReportCard key={r.id} report={r} />)}
-            </div>
-          )}
-        </div>
-      )}
-
-      {!selected && !loading && (
-        <div className="col g-3" style={{ marginTop: 20 }}>
-          <h2 className="t-h2">Places</h2>
           <div className="place-list">
-            {locations.map((l) => (
-              <button key={l.id} className="place" onClick={() => setSelected(l)}>
-                <span style={{ fontSize: 18 }}>{ZONE_EMOJI[l.zone] || '📍'}</span>
-                <span className="grow truncate" style={{ textAlign: 'left', fontWeight: 600 }}>{l.name}</span>
-                {Number(l.open_count) > 0 ? (
-                  <span className="badge s-reported"><span className="dot" />{l.open_count}</span>
-                ) : (
-                  <span className="badge s-fixed"><span className="dot" />Clear</span>
-                )}
-              </button>
-            ))}
+            {list.map((l, i) => {
+              const open = Number(l.open_count || 0)
+              return (
+                <button
+                  key={l.id}
+                  className={`place ${open > 0 ? 'has-open' : ''} rise`}
+                  style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
+                  onClick={() => setSelected(l)}
+                >
+                  <span className="grow" style={{ textAlign: 'left', minWidth: 0 }}>
+                    <span className="place-name truncate">{l.name}</span>
+                    {/* A bar rather than a second number: the comparison between
+                        blocks is the point, and the eye reads length faster. */}
+                    <span className="place-bar" aria-hidden="true">
+                      <span style={{ width: `${(open / busiest) * 100}%` }} />
+                    </span>
+                  </span>
+
+                  {open > 0 ? (
+                    <span className="badge s-reported"><span className="dot" />{open} open</span>
+                  ) : (
+                    <span className="badge s-fixed"><span className="dot" />Clear</span>
+                  )}
+                  <Icon.Next width={16} height={16} />
+                </button>
+              )
+            })}
           </div>
-        </div>
+        </section>
+      ))}
+
+      {!loading && locations.length === 0 && (
+        <EmptyState
+          title="No blocks set up yet"
+          message="An admin adds the blocks for your college under Manage."
+        />
       )}
     </div>
   )
