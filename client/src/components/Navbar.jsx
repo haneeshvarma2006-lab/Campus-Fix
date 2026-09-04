@@ -1,16 +1,102 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, Icon } from './ui'
 
-/** The four places a signed-in student actually goes. */
+/**
+ * Navigation differs by role because the jobs differ. A student files reports
+ * and follows their own; an admin works a queue and maintains the categories,
+ * locations and people behind it. Giving an admin a raised "Report" button and
+ * a "My reports" tab that is almost always empty just wastes the two most
+ * reachable places on a phone.
+ */
 function tabsFor(isAdmin) {
+  if (isAdmin) {
+    return [
+      { to: '/admin', label: 'Queue', icon: Icon.Home, end: true },
+      { to: '/campus', label: 'Campus', icon: Icon.Map },
+      { to: '/admin/settings', label: 'Manage', icon: Icon.Settings },
+    ]
+  }
   return [
-    { to: isAdmin ? '/admin' : '/dashboard', label: 'Home', icon: Icon.Home, end: true },
+    { to: '/dashboard', label: 'Home', icon: Icon.Home, end: true },
     { to: '/campus', label: 'Campus', icon: Icon.Map },
     { to: '/submit', label: 'Report', icon: Icon.Plus, primary: true },
     { to: '/reports', label: 'My reports', icon: Icon.List },
   ]
+}
+
+/**
+ * The avatar is the only account control on a phone, so it has to actually open
+ * something. Before this it rendered as a bare span, which meant a student had
+ * no way to sign out and an admin no way to reach Settings without a desktop.
+ */
+function ProfileMenu({ user, isAdmin, onLogout }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+  const location = useLocation()
+
+  // Navigating away should never leave the menu hanging open behind the page.
+  useEffect(() => setOpen(false), [location.pathname])
+
+  useEffect(() => {
+    if (!open) return
+    const onPointer = (e) => { if (!wrapRef.current?.contains(e.target)) setOpen(false) }
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div className="profile" ref={wrapRef}>
+      <button
+        className="profile-btn"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Account: ${user.name}`}
+      >
+        <Avatar name={user.name} src={user.avatarUrl} />
+      </button>
+
+      {open && (
+        <div className="menu" role="menu">
+          <div className="menu-head">
+            <Avatar name={user.name} src={user.avatarUrl} />
+            <span className="col g-1 grow" style={{ minWidth: 0 }}>
+              <strong className="t-sm truncate">{user.name}</strong>
+              <span className="t-xs muted truncate">{user.email}</span>
+            </span>
+          </div>
+
+          <span className={`role-tag ${isAdmin ? 'admin' : ''}`}>
+            {isAdmin ? 'Administrator' : 'Student'}
+          </span>
+
+          <div className="menu-sep" />
+
+          {isAdmin ? (
+            <Link to="/admin/settings" className="menu-item" role="menuitem">
+              <Icon.List width={16} height={16} /> Categories, places &amp; people
+            </Link>
+          ) : (
+            <Link to="/reports" className="menu-item" role="menuitem">
+              <Icon.List width={16} height={16} /> My reports
+            </Link>
+          )}
+
+          <button className="menu-item danger" role="menuitem" onClick={onLogout}>
+            <Icon.Logout width={16} height={16} /> Log out
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function Navbar() {
@@ -64,16 +150,8 @@ export function Navbar() {
                     {t.label}
                   </NavLink>
                 ))}
-                {isAdmin && (
-                  <NavLink to="/admin/settings" className={({ isActive }) => `nav-a ${isActive ? 'on' : ''}`}>
-                    Settings
-                  </NavLink>
-                )}
                 {themeBtn}
-                <Avatar name={user.name} src={user.avatarUrl} title={`${user.name} · ${user.role}`} />
-                <button className="icon-btn" onClick={handleLogout} aria-label="Log out" title="Log out">
-                  <Icon.Logout />
-                </button>
+                <ProfileMenu user={user} isAdmin={isAdmin} onLogout={handleLogout} />
               </>
             ) : (
               <>
@@ -88,7 +166,7 @@ export function Navbar() {
           <nav className="nav nav-mobile-only">
             {themeBtn}
             {user
-              ? <Avatar name={user.name} src={user.avatarUrl} />
+              ? <ProfileMenu user={user} isAdmin={isAdmin} onLogout={handleLogout} />
               : <Link to="/login" className="btn btn-sm">Log in</Link>}
           </nav>
         </div>

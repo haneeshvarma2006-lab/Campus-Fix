@@ -22,6 +22,16 @@ const Campus          = lazy(() => import('./pages/Campus').then(m => ({ default
 const AdminDashboard  = lazy(() => import('./pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })))
 const AdminSettings   = lazy(() => import('./pages/AdminSettings').then(m => ({ default: m.AdminSettings })))
 
+/**
+ * An admin on the student dashboard sees their own reports, which is nearly
+ * always nothing at all. Send them to the queue they actually work instead of
+ * showing them an empty page that looks broken.
+ */
+function StudentHome() {
+  const { isAdmin } = useAuth()
+  return isAdmin ? <Navigate to="/admin" replace /> : <StudentDashboard />
+}
+
 /** Admins land on the queue, students on their own dashboard. */
 function Home() {
   const { user, isAdmin, loading } = useAuth()
@@ -47,7 +57,7 @@ export default function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
 
-            <Route path="/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><StudentHome /></ProtectedRoute>} />
             <Route path="/submit" element={<ProtectedRoute><SubmitReport /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><MyReports /></ProtectedRoute>} />
             <Route path="/reports/:id" element={<ProtectedRoute><ReportDetail /></ProtectedRoute>} />
