@@ -59,7 +59,7 @@ export const CATEGORY_META = {
   Electricity: { icon: 'Zap',         label: 'Electricity' },
   Water:       { icon: 'Droplets',    label: 'Water' },
   'Wi-Fi':     { icon: 'Wifi',        label: 'Wi-Fi' },
-  Cleanliness: { icon: 'Trash2',      label: 'Cleanliness' },
+  Cleanliness: { icon: 'Sparkles',    label: 'Cleanliness' },
   Classroom:   { icon: 'Presentation',label: 'Classroom' },
   Hostel:      { icon: 'BedDouble',   label: 'Hostel' },
   Washroom:    { icon: 'ShowerHead',  label: 'Washroom' },

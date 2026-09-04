@@ -160,41 +160,78 @@ export function AdminDashboard() {
         <Link to="/admin/settings" className="btn btn-ghost">Settings</Link>
       </div>
 
-      {/* --- stage counts, each one a filter --- */}
-      <div className="stats" style={{ marginBottom: 14 }}>
-        {tiles.map((t) => (
-          <button
-            key={t.key}
-            className={`stat t-${t.key}`}
-            onClick={() => update({ status: status === t.key ? 'all' : t.key })}
-            title={`Filter by ${t.label.toLowerCase()}`}
-            style={{ textAlign: 'left' }}
-          >
-            <div className="stat-n">{t.value ?? '—'}</div>
-            <div className="stat-l"><span className="dot" />{t.label}</div>
-          </button>
-        ))}
-      </div>
-
-      <div className="stats" style={{ marginBottom: 26 }}>
-        <div className="stat">
-          <div className="stat-n">{stats ? `${stats.fixRate}%` : '—'}</div>
-          <div className="stat-l"><Icon.Check width={13} height={13} />Fix rate</div>
-        </div>
-        <div className="stat">
-          <div className="stat-n">{stats ? formatHours(stats.avgFixHours) : '—'}</div>
-          <div className="stat-l"><Icon.Clock width={13} height={13} />Avg time to fix</div>
-        </div>
-        <div className="stat">
-          <div className="stat-n">
-            {stats?.oldestOpenDays ?? '—'}
-            {stats?.oldestOpenDays != null && <span style={{ fontSize: 18 }}>d</span>}
+      {/*
+        * The queue at a glance.
+        *
+        * This was nine identical tiles. Five of them were the stages of one
+        * pipeline — parts of a single whole, drawn as five unrelated facts —
+        * and on a phone the fifth sat alone in a row of two. A stacked bar
+        * says what five cards could not: this is the shape of the queue, and
+        * this is which part of it is growing.
+        */}
+      <section className="queue">
+        <div className="queue-top">
+          <div>
+            <div className="queue-n">{stats?.openCount ?? '—'}</div>
+            <div className="queue-l">still needing attention</div>
           </div>
-          <div className="stat-l"><Icon.Alert width={13} height={13} />Oldest still open</div>
+          {stats?.oldestOpenDays != null && (
+            <div className="queue-aside">
+              <Icon.Alert width={14} height={14} />
+              oldest is <strong>{stats.oldestOpenDays}d</strong> old
+            </div>
+          )}
         </div>
-        <div className="stat">
-          <div className="stat-n">{stats?.openCount ?? '—'}</div>
-          <div className="stat-l"><Icon.Inbox width={13} height={13} />Active queue</div>
+
+        <div
+          className="qbar"
+          role="img"
+          aria-label={tiles.map((t) => `${t.value ?? 0} ${t.label.toLowerCase()}`).join(', ')}
+        >
+          {tiles.map((t) => (
+            Number(t.value) > 0 && (
+              <span
+                key={t.key}
+                className={`qseg q-${t.key} ${status === t.key ? 'on' : ''}`}
+                style={{ flexGrow: Number(t.value) }}
+              />
+            )
+          ))}
+          {!stats && <span className="qseg q-empty" style={{ flexGrow: 1 }} />}
+        </div>
+
+        <div className="qlegend">
+          {tiles.map((t) => (
+            <button
+              key={t.key}
+              className={`qrow q-${t.key} ${status === t.key ? 'on' : ''}`}
+              onClick={() => update({ status: status === t.key ? 'all' : t.key })}
+              title={`Show only ${t.label.toLowerCase()}`}
+            >
+              <span className="qdot" />
+              <span className="grow truncate">{t.label}</span>
+              <span className="qn">{t.value ?? '—'}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Three measures of how the queue is being worked, not what is in it. */}
+      <div className="kpis">
+        <div className="kpi">
+          <Icon.Check width={14} height={14} />
+          <span className="kpi-n">{stats ? `${stats.fixRate}%` : '—'}</span>
+          <span className="kpi-l">Fix rate</span>
+        </div>
+        <div className="kpi">
+          <Icon.Clock width={14} height={14} />
+          <span className="kpi-n">{stats ? formatHours(stats.avgFixHours) : '—'}</span>
+          <span className="kpi-l">Avg to fix</span>
+        </div>
+        <div className="kpi">
+          <Icon.Inbox width={14} height={14} />
+          <span className="kpi-n">{stats?.total ?? '—'}</span>
+          <span className="kpi-l">Total filed</span>
         </div>
       </div>
 

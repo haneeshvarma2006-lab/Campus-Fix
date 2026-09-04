@@ -15,7 +15,7 @@ import { STATUS_LABEL, PRIORITY_LABEL } from '../lib/format'
 import {
   Home, Map, List, Plus, MapPin, Camera, MessageSquare, ArrowUp,
   ChevronLeft, ChevronRight, Check, Search, AlertCircle, Clock, Inbox,
-  Trash2, Sun, Moon, LogOut, Settings, ExternalLink, X,
+  Trash2, Sun, Moon, LogOut, Settings, ExternalLink, X, Sparkles,
   Zap, Droplets, Wifi, Presentation, BedDouble, ShowerHead, Armchair,
   ShieldAlert, Wrench, School, Trees, Building2, DoorOpen, Bell, CircleCheckBig,
 } from 'lucide-react'
@@ -71,7 +71,7 @@ export const Icon = {
     back rather than rendering nothing, so an admin can add a category the
     frontend has never heard of. */
 const BY_NAME = {
-  Zap, Droplets, Wifi, Trash2, Presentation, BedDouble, ShowerHead,
+  Zap, Droplets, Wifi, Sparkles, Presentation, BedDouble, ShowerHead,
   Armchair, ShieldAlert, Wrench, School, Trees, Building2, DoorOpen, MapPin,
   Camera, Bell, CircleCheckBig,
 }

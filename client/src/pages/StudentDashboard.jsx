@@ -59,19 +59,27 @@ export function StudentDashboard() {
         <Icon.Next />
       </Link>
 
+      {/*
+        * Three equal tiles said open, fixed and total carried equal weight.
+        * They do not: a student wants to know whether the thing they reported
+        * is still waiting. Open leads, fixed reassures, total is a footnote.
+        */}
       {counts && counts.total > 0 && (
-        <div className="stats" style={{ marginBlock: 18 }}>
-          <div className="stat">
-            <div className="stat-n">{open}</div>
-            <div className="stat-l"><span className="dot" style={{ background: 'var(--reported)' }} />Still open</div>
+        <div className="mine">
+          <div className="mine-main">
+            <span className="mine-n">{open}</span>
+            <span className="mine-l">
+              {open === 0
+                ? 'Nothing of yours is waiting'
+                : `of yours still ${open === 1 ? 'needs' : 'need'} attention`}
+            </span>
           </div>
-          <div className="stat">
-            <div className="stat-n">{fixed}</div>
-            <div className="stat-l"><span className="dot" style={{ background: 'var(--fixed)' }} />Fixed</div>
-          </div>
-          <div className="stat">
-            <div className="stat-n">{counts.total}</div>
-            <div className="stat-l"><span className="dot" style={{ background: 'var(--ink-4)' }} />Total</div>
+
+          <div className="mine-side">
+            <span className="mine-chip s-fixed">
+              <span className="dot" />{fixed} fixed
+            </span>
+            <span className="t-xs faint">{counts.total} filed in total</span>
           </div>
         </div>
       )}

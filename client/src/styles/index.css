@@ -1278,3 +1278,146 @@ button.stat:hover { border-color: var(--line-2); background: var(--sunken); }
   font-size: 13.5px;
   text-transform: capitalize;
 }
+
+/* --- the queue ------------------------------------------------------------- */
+/* Nine identical tiles became one object plus three measures. Five of those
+   tiles were stages of a single pipeline, so they are drawn as one bar: the
+   shape of the queue is the information, and no card can show a proportion. */
+
+.queue {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+  margin-bottom: 12px;
+}
+
+.queue-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+
+.queue-n {
+  font-size: clamp(38px, 11vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.queue-l { font-size: 14px; color: var(--ink-3); margin-top: 4px; }
+
+.queue-aside {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 11px;
+  border-radius: var(--r-full);
+  background: var(--reported-bg);
+  color: var(--reported);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.queue-aside strong { font-weight: 750; }
+
+.qbar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  margin: 16px 0 14px;
+}
+.qseg {
+  border-radius: 999px;
+  min-width: 4px;
+  transition: opacity .15s var(--ease);
+}
+.qseg.on { outline: 2px solid var(--ink); outline-offset: 2px; }
+.q-empty { background: var(--inset); }
+
+.q-reported    .qdot, .qseg.q-reported    { background: var(--reported); }
+.q-assigned    .qdot, .qseg.q-assigned    { background: var(--assigned); }
+.q-in_progress .qdot, .qseg.q-in_progress { background: var(--progress); }
+.q-fixed       .qdot, .qseg.q-fixed       { background: var(--fixed); }
+.q-rejected    .qdot, .qseg.q-rejected    { background: var(--rejected); }
+
+/* One column on a phone. Five rows split across two columns always leaves the
+   fifth sitting alone, and a stage list reads perfectly well stacked. */
+.qlegend { display: grid; grid-template-columns: 1fr; gap: 2px; }
+@media (min-width: 560px) { .qlegend { grid-template-columns: repeat(5, 1fr); } }
+@media (min-width: 560px) { .qrow { flex-direction: column; align-items: flex-start; gap: 3px; min-height: 56px; } .qrow .qn { font-size: 17px; } }
+
+.qrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: var(--r-1);
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--ink-2);
+  text-align: left;
+  transition: background .12s;
+}
+.qrow:hover { background: var(--sunken); }
+.qrow.on { background: var(--sunken); color: var(--ink); font-weight: 650; }
+
+.qdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.qn { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink); }
+
+/* Three measures of how the queue is worked. Quieter than the queue itself —
+   they are context, not the headline. */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 26px; }
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: var(--r-2);
+  background: var(--sunken);
+  color: var(--ink-3);
+}
+.kpi-n {
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.kpi-l { font-size: 11.5px; }
+
+/* --- a student's own numbers ------------------------------------------------ */
+/* Three equal tiles gave open, fixed and total the same weight. A student is
+   really asking one question — is my thing still waiting — so that answer is
+   the only one set large. */
+
+.mine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  margin-block: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+}
+
+.mine-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.mine-n {
+  font-size: clamp(32px, 9vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.mine-l { font-size: 14px; color: var(--ink-3); }
+
+.mine-side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.mine-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--r-full);
+  font-size: 12.5px;
+  font-weight: 650;
+  border: 1px solid transparent;
+}
+.mine-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
