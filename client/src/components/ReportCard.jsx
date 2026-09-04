@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { StatusBadge, PriorityTag, Icon } from './ui'
+import { StatusBadge, PriorityTag, Icon, NamedIcon } from './ui'
 import { timeAgo, categoryMeta } from '../lib/format'
 
 export function ReportCard({ report, showReporter = false }) {
@@ -9,7 +9,7 @@ export function ReportCard({ report, showReporter = false }) {
     <Link to={`/reports/${report.id}`} className="card card-link rc">
       <div className="between" style={{ alignItems: 'flex-start' }}>
         <span className="row g-2" style={{ minWidth: 0 }}>
-          <span style={{ fontSize: 19 }} aria-hidden="true">{meta.emoji}</span>
+          <NamedIcon name={meta.icon} width={18} height={18} aria-hidden="true" />
           <span className="tag">{meta.label}</span>
           <PriorityTag priority={report.priority} />
         </span>

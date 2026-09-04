@@ -21,7 +21,7 @@ function EventLine({ event }) {
         {event.toStatus === 'fixed' && <Icon.Check width={9} height={9} />}
       </span>
       <div className="col g-2" style={{ flex: 1, minWidth: 0 }}>
-        <div className="row wrap" style={{ gap: 8 }}>
+        <div className="row wrap-x" style={{ gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 550 }}>{label}</span>
           <span className="t-xs faint mono">{formatDateTime(event.createdAt)}</span>
         </div>
@@ -165,7 +165,7 @@ export function ReportDetail() {
         {/* --- main column --- */}
         <div className="col g-6">
           <div>
-            <div className="row wrap" style={{ gap: 9, marginBottom: 12 }}>
+            <div className="row wrap-x" style={{ gap: 9, marginBottom: 12 }}>
               <span className="code">#{report.code}</span>
               <StatusBadge status={report.status} />
               <span className="tag">{report.category}</span>
@@ -220,7 +220,7 @@ export function ReportDetail() {
                 <div key={c.id} className="row-top" style={{ gap: 12 }}>
                   <Avatar name={c.authorName} src={c.authorAvatar} size="avatar-sm" />
                   <div className="col g-2" style={{ flex: 1, minWidth: 0 }}>
-                    <div className="row wrap" style={{ gap: 8 }}>
+                    <div className="row wrap-x" style={{ gap: 8 }}>
                       <strong style={{ fontSize: 13.5 }}>{c.authorName}</strong>
                       {c.authorRole === 'admin' && <span className="pill-role">Admin</span>}
                       <span className="t-xs faint mono">{timeAgo(c.createdAt)}</span>
@@ -311,7 +311,7 @@ export function ReportDetail() {
               </div>
 
               <span className="label" style={{ display: 'block', marginBottom: 8 }}>Move to</span>
-              <div className="row wrap" style={{ gap: 6, marginBottom: 16 }}>
+              <div className="row wrap-x" style={{ gap: 6, marginBottom: 16 }}>
                 {STATUSES.map((s) => (
                   <button
                     key={s}

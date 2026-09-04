@@ -2,36 +2,61 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import { STATUS_LABEL, PRIORITY_LABEL } from '../lib/format'
 
 /* --- icons ----------------------------------------------------------------- */
-/* Inline strokes rather than an icon font: nothing to download, and they
-   inherit colour and size from the surrounding text. */
+/*
+ * Lucide, imported one icon at a time so the bundler only ships what is used.
+ *
+ * These were hand-drawn SVGs, which was fine for the fourteen we happened to
+ * need and a problem for the fifteenth. Categories were emoji, which the
+ * operating system draws — so the same report looked different on every phone,
+ * and on a mid-range Android the set renders inconsistently enough to read as
+ * unfinished. Drawn icons take the text colour, scale with the type, and look
+ * the same everywhere.
+ */
+import {
+  Home, Map, List, Plus, MapPin, Camera, MessageSquare, ArrowUp,
+  ChevronLeft, ChevronRight, Check, Search, AlertCircle, Clock, Inbox,
+  Trash2, Sun, Moon, LogOut, Settings, ExternalLink, X,
+  Zap, Droplets, Wifi, Presentation, BedDouble, ShowerHead, Armchair,
+  ShieldAlert, Wrench, School, Trees, Building2, DoorOpen, Bell, CircleCheckBig,
+} from 'lucide-react'
 
-const s = {
-  width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none',
-  stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round',
+/** Lucide's own defaults are 24px and stroke 2 — a little heavy next to this
+    type. One place to change the weight of every icon in the app. */
+const base = { size: 18, strokeWidth: 1.75, absoluteStrokeWidth: false }
+
+const wrap = (C) => {
+  const Wrapped = ({ width, height, ...p }) => (
+    <C {...base} {...(width ? { size: width } : null)} {...p} />
+  )
+  Wrapped.displayName = C.displayName || 'Icon'
+  return Wrapped
 }
 
 export const Icon = {
-  Home: (p) => <svg {...s} {...p}><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z" /></svg>,
-  Map: (p) => <svg {...s} {...p}><path d="M7.5 3 3 5v12l4.5-2 5 2L17 15V3l-4.5 2z" /><path d="M7.5 3v12M12.5 5v12" /></svg>,
-  List: (p) => <svg {...s} {...p}><path d="M7 5h10M7 10h10M7 15h10M3.5 5h.01M3.5 10h.01M3.5 15h.01" /></svg>,
-  Plus: (p) => <svg {...s} {...p}><path d="M10 4.5v11M4.5 10h11" /></svg>,
-  Pin: (p) => <svg {...s} {...p}><path d="M16 8.4c0 4.3-6 9.6-6 9.6s-6-5.3-6-9.6a6 6 0 0 1 12 0z" /><circle cx="10" cy="8.3" r="2.1" /></svg>,
-  Camera: (p) => <svg {...s} {...p}><path d="M3 7h2.7l1.2-2h6.2l1.2 2H17a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="10" cy="11.5" r="2.8" /></svg>,
-  Chat: (p) => <svg {...s} {...p}><path d="M17.5 11.6a2.4 2.4 0 0 1-2.4 2.4H6.5L3 17V4.9a2.4 2.4 0 0 1 2.4-2.4h9.7a2.4 2.4 0 0 1 2.4 2.4z" /></svg>,
-  Up: (p) => <svg {...s} {...p}><path d="M10 16V4.5M5 9.5l5-5 5 5" /></svg>,
-  Back: (p) => <svg {...s} {...p}><path d="M12.5 15.5 7 10l5.5-5.5" /></svg>,
-  Next: (p) => <svg {...s} {...p}><path d="M7.5 4.5 13 10l-5.5 5.5" /></svg>,
-  Check: (p) => <svg {...s} {...p}><path d="M4 10.5 8 14.5 16 6" /></svg>,
-  Search: (p) => <svg {...s} {...p}><circle cx="9" cy="9" r="5.5" /><path d="M13.2 13.2 17 17" /></svg>,
-  Alert: (p) => <svg {...s} {...p}><circle cx="10" cy="10" r="7.6" /><path d="M10 6.2v4.4M10 13.4v.1" /></svg>,
-  Clock: (p) => <svg {...s} {...p}><circle cx="10" cy="10" r="7.6" /><path d="M10 5.5V10l3 1.9" /></svg>,
-  Inbox: (p) => <svg {...s} {...p}><path d="M2.5 12h4l1.2 2.4h4.6L13.5 12h4M3.2 12l2-7.4a1.2 1.2 0 0 1 1.2-.9h7.2a1.2 1.2 0 0 1 1.2.9l2 7.4v3.6a1.2 1.2 0 0 1-1.2 1.2H4.4a1.2 1.2 0 0 1-1.2-1.2z" /></svg>,
-  Trash: (p) => <svg {...s} {...p}><path d="M3.5 5.4h13M7.8 5.4V4a1 1 0 0 1 1-1h2.4a1 1 0 0 1 1 1v1.4M5.3 5.4l.8 10.8a1.1 1.1 0 0 0 1.1 1h5.6a1.1 1.1 0 0 0 1.1-1l.8-10.8" /></svg>,
-  Sun: (p) => <svg {...s} {...p}><circle cx="10" cy="10" r="3.6" /><path d="M10 1.4v2M10 16.6v2M18.6 10h-2M3.4 10h-2M16.1 3.9l-1.4 1.4M5.3 14.7l-1.4 1.4M16.1 16.1l-1.4-1.4M5.3 5.3 3.9 3.9" /></svg>,
-  Moon: (p) => <svg {...s} {...p}><path d="M16.9 12a7.2 7.2 0 0 1-8.9-8.9 7.2 7.2 0 1 0 8.9 8.9z" /></svg>,
-  Logout: (p) => <svg {...s} {...p}><path d="M12.5 6V4.2a1.2 1.2 0 0 0-1.2-1.2H4.7a1.2 1.2 0 0 0-1.2 1.2v11.6a1.2 1.2 0 0 0 1.2 1.2h6.6a1.2 1.2 0 0 0 1.2-1.2V14M8 10h9.5M15 7.5 17.5 10 15 12.5" /></svg>,
-  Settings: (p) => <svg {...s} {...p}><circle cx="10" cy="10" r="2.6" /><path d="M15.9 12.2a1.3 1.3 0 0 0 .3 1.4l.1.1a1.6 1.6 0 1 1-2.2 2.2l-.1-.1a1.3 1.3 0 0 0-2.2.9v.2a1.6 1.6 0 1 1-3.2 0v-.1a1.3 1.3 0 0 0-2.2-.9l-.1.1a1.6 1.6 0 1 1-2.2-2.2l.1-.1a1.3 1.3 0 0 0-.9-2.2H3.2a1.6 1.6 0 1 1 0-3.2h.1a1.3 1.3 0 0 0 .9-2.2l-.1-.1a1.6 1.6 0 1 1 2.2-2.2l.1.1a1.3 1.3 0 0 0 2.2-.9V3a1.6 1.6 0 1 1 3.2 0v.1a1.3 1.3 0 0 0 2.2.9l.1-.1a1.6 1.6 0 1 1 2.2 2.2l-.1.1a1.3 1.3 0 0 0 .9 2.2h.2a1.6 1.6 0 1 1 0 3.2h-.1a1.3 1.3 0 0 0-1.2.8z" /></svg>,
-  External: (p) => <svg {...s} {...p}><path d="M12 3.5h4.5V8M16 4 9.5 10.5M14 12v3.5a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1H8" /></svg>,
+  Home: wrap(Home),
+  Map: wrap(Map),
+  List: wrap(List),
+  Plus: wrap(Plus),
+  Pin: wrap(MapPin),
+  Camera: wrap(Camera),
+  Chat: wrap(MessageSquare),
+  Up: wrap(ArrowUp),
+  Back: wrap(ChevronLeft),
+  Next: wrap(ChevronRight),
+  Check: wrap(Check),
+  Search: wrap(Search),
+  Alert: wrap(AlertCircle),
+  Clock: wrap(Clock),
+  Inbox: wrap(Inbox),
+  Trash: wrap(Trash2),
+  Sun: wrap(Sun),
+  Moon: wrap(Moon),
+  Logout: wrap(LogOut),
+  Settings: wrap(Settings),
+  External: wrap(ExternalLink),
+  Close: wrap(X),
+
+  // Google's mark is a brand asset, not a UI icon, so it stays hand-drawn.
   Google: (p) => (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" {...p}>
       <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z" />
@@ -40,6 +65,20 @@ export const Icon = {
       <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
     </svg>
   ),
+}
+
+/** Named in CATEGORY_META and ZONE_ICON, resolved here. Unknown names fall
+    back rather than rendering nothing, so an admin can add a category the
+    frontend has never heard of. */
+const BY_NAME = {
+  Zap, Droplets, Wifi, Trash2, Presentation, BedDouble, ShowerHead,
+  Armchair, ShieldAlert, Wrench, School, Trees, Building2, DoorOpen, MapPin,
+  Camera, Bell, CircleCheckBig,
+}
+
+export function NamedIcon({ name, fallback = 'Wrench', ...p }) {
+  const C = BY_NAME[name] || BY_NAME[fallback]
+  return <C {...base} {...p} />
 }
 
 /* --- status ---------------------------------------------------------------- */

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Icon } from '../components/ui'
+import { Icon, NamedIcon } from '../components/ui'
 import { categoryMeta } from '../lib/format'
 
 /**
@@ -25,9 +25,9 @@ const QUICK_CATEGORIES = [
 ]
 
 const STEPS = [
-  { emoji: '📸', title: 'Snap it', body: 'Photo, place, one line. Under a minute.' },
-  { emoji: '🔔', title: 'Track it', body: 'Watch it move from reported to fixed.' },
-  { emoji: '✅', title: 'Done', body: 'Closed with a note saying what happened.' },
+  { icon: 'Camera', title: 'Snap it', body: 'Photo, place, one line. Under a minute.' },
+  { icon: 'Bell', title: 'Track it', body: 'Watch it move from reported to fixed.' },
+  { icon: 'CircleCheckBig', title: 'Done', body: 'Closed with a note saying what happened.' },
 ]
 
 export function Landing() {
@@ -95,7 +95,7 @@ export function Landing() {
             const meta = categoryMeta(name)
             return (
               <Link key={name} to="/signup" className="choice">
-                <span className="choice-emoji">{meta.emoji}</span>
+                <span className="choice-icon"><NamedIcon name={meta.icon} width={22} height={22} /></span>
                 {meta.label}
               </Link>
             )
@@ -109,7 +109,7 @@ export function Landing() {
           {STEPS.map((s, i) => (
             <div key={s.title} className="card col g-2">
               <div className="row g-2">
-                <span style={{ fontSize: 22 }}>{s.emoji}</span>
+                <span className="step-icon"><NamedIcon name={s.icon} width={20} height={20} /></span>
                 <span className="overline">Step {i + 1}</span>
               </div>
               <h3 className="t-h3">{s.title}</h3>

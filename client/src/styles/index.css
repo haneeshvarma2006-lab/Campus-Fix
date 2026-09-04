@@ -137,6 +137,10 @@ html {
 
 html, body, #root { min-height: 100%; }
 
+/* A single over-wide child must never drag the whole page sideways. `clip`
+   rather than `hidden` because `hidden` would break the sticky header. */
+html { overflow-x: clip; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -462,7 +466,28 @@ select.input, .field select {
   color: var(--brand);
 }
 
-.choice-emoji { font-size: 26px; line-height: 1; }
+.choice-icon {
+  display: grid;
+  place-items: center;
+  width: 38px; height: 38px;
+  border-radius: var(--r-2);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.choice.on .choice-icon { background: var(--brand); color: #fff; }
+
+.step-icon {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: var(--r-2);
+  background: var(--brand-soft);
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+/* An icon sitting on the baseline of an uppercase label needs pulling in. */
+.zone-head { display: inline-flex; align-items: center; gap: 6px; }
 
 /* A wider variant for locations, which have longer names. */
 .choices-wide { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
@@ -1215,4 +1240,41 @@ button.stat:hover { border-color: var(--line-2); background: var(--sunken); }
 
 @media (prefers-reduced-motion: reduce) {
   .rise { animation: none; }
+}
+
+/* --- people ----------------------------------------------------------------- */
+/* This was a five-column table. On a 375px screen the Role control sat past the
+   right edge, so an admin on a phone could read the list and change nothing in
+   it — the one thing the page is for. */
+
+.people { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+
+.person {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface);
+}
+
+.person-top { display: flex; align-items: center; gap: 11px; }
+.person-name { display: block; font-weight: 600; font-size: 14.5px; }
+
+.person-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.person-role {
+  width: auto;
+  min-width: 108px;
+  min-height: 38px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  text-transform: capitalize;
 }

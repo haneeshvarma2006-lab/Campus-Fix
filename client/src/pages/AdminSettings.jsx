@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
-import { useToast, Icon } from '../components/ui'
+import { useToast, Icon, Avatar } from '../components/ui'
 import { formatDate } from '../lib/format'
 
 const ROLES = ['student', 'admin']
@@ -80,7 +80,7 @@ function Categories() {
           </p>
         </div>
       ) : (
-        <div className="row wrap" style={{ gap: 8 }}>
+        <div className="row wrap-x" style={{ gap: 8 }}>
           {categories.map((c) => (
             <span
               key={c.id}
@@ -139,44 +139,52 @@ function People() {
       </p>
 
       {loading ? (
-        <div className="skel" style={{ height: 180 }} />
+        <div className="col g-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="skel" style={{ height: 74, borderRadius: 12 }} />
+          ))}
+        </div>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th style={{ textAlign: 'right' }}>Reports</th>
-                <th>Joined</th>
-                <th style={{ width: 150 }}>Role</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    <span style={{ fontWeight: 550 }}>{u.name}</span>
+        /*
+         * Cards, not a table.
+         *
+         * Five columns on a 375px screen pushed the Role control off the right
+         * edge, so an admin on a phone could see who existed and change nothing
+         * about them — the one action this page exists for. A card gives each
+         * person their own block and puts the control back on screen.
+         */
+        <div className="people">
+          {users.map((u, i) => (
+            <div key={u.id} className="person rise" style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}>
+              <div className="person-top">
+                <Avatar name={u.name} src={u.avatarUrl} />
+                <span className="grow" style={{ minWidth: 0 }}>
+                  <span className="person-name truncate">
+                    {u.name}
                     {u.id === user?.id && <span className="t-xs muted"> · you</span>}
-                  </td>
-                  <td className="muted t-xs">{u.email}</td>
-                  <td className="mono t-xs" style={{ textAlign: 'right' }}>{u.reportCount}</td>
-                  <td className="muted t-xs">{formatDate(u.createdAt)}</td>
-                  <td>
-                    <select
-                      className="input"
-                      style={{ padding: '5px 26px 5px 8px', fontSize: 13 }}
-                      value={u.role}
-                      onChange={(e) => changeRole(u, e.target.value)}
-                      title={ROLE_HINT[u.role]}
-                    >
-                      {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </span>
+                  <span className="t-xs muted truncate" style={{ display: 'block' }}>{u.email}</span>
+                </span>
+              </div>
+
+              <div className="person-foot">
+                <span className="t-xs faint">
+                  {u.reportCount} {Number(u.reportCount) === 1 ? 'report' : 'reports'}
+                  {' · joined '}{formatDate(u.createdAt)}
+                </span>
+
+                <select
+                  className="input person-role"
+                  value={u.role}
+                  onChange={(e) => changeRole(u, e.target.value)}
+                  title={ROLE_HINT[u.role]}
+                  aria-label={`Role for ${u.name}`}
+                >
+                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

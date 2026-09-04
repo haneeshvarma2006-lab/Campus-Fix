@@ -43,7 +43,7 @@ export function MyReports() {
 
   return (
     <div className="wrap page in">
-      <div className="between wrap page-head">
+      <div className="between wrap-x page-head">
         <div>
           <h1 className="t-h1" style={{ fontSize: 'clamp(28px, 3.6vw, 38px)' }}>My reports</h1>
           <p className="lede">
@@ -55,7 +55,7 @@ export function MyReports() {
         </Link>
       </div>
 
-      <div className="row wrap" style={{ gap: 7, marginBottom: 22 }}>
+      <div className="row wrap-x" style={{ gap: 7, marginBottom: 22 }}>
         {FILTERS.map((f) => (
           <button
             key={f.id}

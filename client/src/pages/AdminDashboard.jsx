@@ -148,7 +148,7 @@ export function AdminDashboard() {
 
   return (
     <div className="wrap page in">
-      <div className="between wrap page-head">
+      <div className="between wrap-x page-head">
         <div>
           <h1 className="t-h1" style={{ fontSize: 'clamp(30px, 4vw, 42px)' }}>Dashboard</h1>
           <p className="lede">
@@ -223,7 +223,7 @@ export function AdminDashboard() {
 
       {/* --- filters --- */}
       <div className="toolbar" style={{ marginBottom: 22 }}>
-        <div className="row wrap" style={{ gap: 8 }}>
+        <div className="row wrap-x" style={{ gap: 8 }}>
           <span className="search-wrap" style={{ minWidth: 220 }}>
             <Icon.Search width={15} height={15} />
             <input
@@ -256,7 +256,7 @@ export function AdminDashboard() {
           </select>
         </div>
 
-        <div className="row wrap" style={{ gap: 7 }}>
+        <div className="row wrap-x" style={{ gap: 7 }}>
           <button className={`chip ${status === 'all' ? 'on' : ''}`} onClick={() => update({ status: 'all' })}>
             All
           </button>

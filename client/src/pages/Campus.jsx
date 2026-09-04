@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { ReportCard } from '../components/ReportCard'
-import { CardSkeleton, EmptyState, Icon, useToast } from '../components/ui'
-import { ZONE_EMOJI } from '../lib/format'
+import { CardSkeleton, EmptyState, Icon, NamedIcon, useToast } from '../components/ui'
+import { ZONE_ICON } from '../lib/format'
 
 /**
  * Every block on campus, grouped the way people talk about them.
@@ -74,7 +74,7 @@ export function Campus() {
         <div className="page-head" style={{ marginTop: 12 }}>
           <h1 className="t-h1">{selected.name}</h1>
           <p className="muted t-sm" style={{ marginTop: 4 }}>
-            {ZONE_EMOJI[selected.zone] || '📍'} {selected.zone} &middot;{' '}
+            {selected.zone} &middot;{' '}
             {selected.open_count} open &middot; {selected.fixed_count} fixed
           </p>
         </div>
@@ -126,7 +126,10 @@ export function Campus() {
 
       {!loading && zones.map(([zone, list]) => (
         <section key={zone} className="col g-2" style={{ marginBottom: 22 }}>
-          <span className="overline">{ZONE_EMOJI[zone] || '📍'} {zone}</span>
+          <span className="overline zone-head">
+            <NamedIcon name={ZONE_ICON[zone]} fallback="MapPin" width={14} height={14} />
+            {zone}
+          </span>
 
           <div className="place-list">
             {list.map((l, i) => {

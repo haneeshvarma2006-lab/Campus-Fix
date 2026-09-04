@@ -47,6 +47,40 @@ for (const file of walk(source).filter((f) => f.endsWith('.jsx'))) {
 
 const missing = [...used].filter(([name]) => !satisfied(name))
 
+/**
+ * `.wrap` is the page container — a max width, centred, with side padding.
+ * `.wrap-x` is the flex-wrap utility. Writing `className="row wrap"` when you
+ * meant `wrap-x` passes every check above, because both classes exist; the row
+ * simply never wraps, overflows, and drags the whole page sideways with it.
+ * That mistake was in eight places across five files before anyone noticed.
+ */
+const FLEX_ROWS = ['row', 'row-top', 'between']
+
+// Report the container/utility confusion separately: both classes exist, so it
+// is not a missing rule, but it is always a bug.
+const suspect = []
+for (const file of walk(source).filter((f) => f.endsWith('.jsx'))) {
+  const jsx = readFileSync(file, 'utf8')
+  for (const match of jsx.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {
+    const literal = (match[1] ?? match[2]).replace(/\$\{[^}]*\}/g, ' ')
+    const names = literal.split(/\s+/).filter(Boolean)
+    // `wrap` alongside an explicit `wrap-x` is a deliberate container-that-wraps,
+    // like the footer. Only the ambiguous case is worth reporting.
+    if (names.includes('wrap') && !names.includes('wrap-x') && names.some((n) => FLEX_ROWS.includes(n))) {
+      suspect.push(`${file.slice(root.length + 1)}  —  className="${literal.trim()}"`)
+    }
+  }
+}
+
+if (suspect.length > 0) {
+  console.error(`${suspect.length} use(s) of .wrap inside a flex row - did you mean .wrap-x?`)
+  console.error('')
+  for (const line of suspect) console.error(`  ${line}`)
+  console.error('')
+  console.error('.wrap is the page container. .wrap-x is flex-wrap.')
+  process.exit(1)
+}
+
 if (missing.length === 0) {
   console.log(`All ${used.size} class names used in JSX are defined in the stylesheet.`)
   process.exit(0)

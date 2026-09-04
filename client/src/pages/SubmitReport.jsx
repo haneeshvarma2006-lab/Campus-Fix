@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import { categoryMeta, ZONE_EMOJI } from '../lib/format'
-import { useToast, Icon, Spinner } from '../components/ui'
+import { categoryMeta, ZONE_ICON } from '../lib/format'
+import { useToast, Icon, NamedIcon, Spinner } from '../components/ui'
 
 /**
  * Reporting, as four short questions instead of one long form.
@@ -161,7 +161,7 @@ export function SubmitReport() {
                     className={`choice ${category === c.name ? 'on' : ''}`}
                     onClick={() => { setCategory(c.name); go(1) }}
                   >
-                    <span className="choice-emoji">{meta.emoji}</span>
+                    <span className="choice-icon"><NamedIcon name={meta.icon} width={22} height={22} /></span>
                     {meta.label}
                   </button>
                 )
@@ -177,13 +177,16 @@ export function SubmitReport() {
           <div>
             <h1 className="t-h1">Where is it?</h1>
             <p className="muted t-sm" style={{ marginTop: 4 }}>
-              {categoryMeta(category).emoji} {categoryMeta(category).label} &middot; pick the place.
+              {categoryMeta(category).label} &middot; pick the place.
             </p>
           </div>
 
           {zones.map((zone) => (
             <div key={zone} className="col g-2">
-              <span className="overline">{ZONE_EMOJI[zone] || '📍'} {zone}</span>
+              <span className="overline zone-head">
+                <NamedIcon name={ZONE_ICON[zone]} fallback="MapPin" width={14} height={14} />
+                {zone}
+              </span>
               <div className="choices choices-wide">
                 {locations.filter((l) => l.zone === zone).map((l) => (
                   <button
@@ -211,7 +214,7 @@ export function SubmitReport() {
           <div>
             <h1 className="t-h1">What happened?</h1>
             <p className="muted t-sm" style={{ marginTop: 4 }}>
-              {categoryMeta(category).emoji} {categoryMeta(category).label} &middot; 📍 {location}
+              {categoryMeta(category).label} &middot; {location}
             </p>
           </div>
 
@@ -303,7 +306,7 @@ export function SubmitReport() {
 
           <div className="panel col g-2">
             <span className="overline">Summary</span>
-            <div className="kv"><dt>Problem</dt><dd>{categoryMeta(category).emoji} {categoryMeta(category).label}</dd></div>
+            <div className="kv"><dt>Problem</dt><dd>{categoryMeta(category).label}</dd></div>
             <div className="kv"><dt>Where</dt><dd>{location}</dd></div>
             <div className="kv"><dt>Title</dt><dd style={{ textAlign: 'right' }}>{title}</dd></div>
             {urgent && <div className="kv"><dt>Priority</dt><dd style={{ color: 'var(--danger)' }}>Urgent</dd></div>}

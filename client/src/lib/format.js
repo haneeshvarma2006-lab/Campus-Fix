@@ -47,30 +47,38 @@ export const STATUS_COLOR_VAR = {
  * zero bytes to download, instantly recognisable, and they render everywhere.
  * `name` must match a row in the categories table.
  */
+/**
+ * Categories carry an icon name, not an emoji.
+ *
+ * Emoji are drawn by the operating system, so the same report looked different
+ * on every phone — and on a mid-range Android the set renders inconsistently
+ * enough to read as unfinished. A drawn icon is the same everywhere, takes the
+ * text colour, and scales with the type.
+ */
 export const CATEGORY_META = {
-  Electricity: { emoji: '🔌', label: 'Electricity' },
-  Water:       { emoji: '🚰', label: 'Water' },
-  'Wi-Fi':     { emoji: '📶', label: 'Wi-Fi' },
-  Cleanliness: { emoji: '🧹', label: 'Cleanliness' },
-  Classroom:   { emoji: '🏫', label: 'Classroom' },
-  Hostel:      { emoji: '🛏️', label: 'Hostel' },
-  Washroom:    { emoji: '🚿', label: 'Washroom' },
-  Furniture:   { emoji: '🪑', label: 'Furniture' },
-  Safety:      { emoji: '🦺', label: 'Safety' },
-  Other:       { emoji: '🔧', label: 'Other' },
+  Electricity: { icon: 'Zap',         label: 'Electricity' },
+  Water:       { icon: 'Droplets',    label: 'Water' },
+  'Wi-Fi':     { icon: 'Wifi',        label: 'Wi-Fi' },
+  Cleanliness: { icon: 'Trash2',      label: 'Cleanliness' },
+  Classroom:   { icon: 'Presentation',label: 'Classroom' },
+  Hostel:      { icon: 'BedDouble',   label: 'Hostel' },
+  Washroom:    { icon: 'ShowerHead',  label: 'Washroom' },
+  Furniture:   { icon: 'Armchair',    label: 'Furniture' },
+  Safety:      { icon: 'ShieldAlert', label: 'Safety' },
+  Other:       { icon: 'Wrench',      label: 'Other' },
 }
 
 /** Falls back gracefully for a category an admin added later. */
 export const categoryMeta = (name) =>
-  CATEGORY_META[name] || { emoji: '🔧', label: name }
+  CATEGORY_META[name] || { icon: 'Wrench', label: name }
 
-export const ZONE_EMOJI = {
-  Academic: '🏫',
-  Hostel: '🛏️',
-  Common: '🌳',
-  Administration: '🗂️',
-  Entrance: '🚪',
-  Campus: '📍',
+export const ZONE_ICON = {
+  Academic: 'School',
+  Hostel: 'BedDouble',
+  Common: 'Trees',
+  Administration: 'Building2',
+  Entrance: 'DoorOpen',
+  Campus: 'MapPin',
 }
 
 export const ROLE_LABEL = {
