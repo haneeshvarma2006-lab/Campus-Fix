@@ -41,8 +41,11 @@ The login page has one-click buttons for these.
 
 | Role | Email | Password | Sees |
 | --- | --- | --- | --- |
-| Admin | `admin@campusfix.app` | `admin1234` | Every report, all controls |
-| Student | `student.a@campus.edu` | `demo1234` | Only their own reports |
+| Admin | `admin@campusfix.app` | *printed by `npm run seed`* | Every report, all controls |
+| Student | `student.a@campus.edu` | *printed by `npm run seed`* | Only their own reports |
+
+Seed passwords are random and shown once, so this repository never carries a
+working login. To make your own account an admin: `npm run promote -- you@college.edu`
 
 Reset at any time with `npm run seed -- --force`.
 

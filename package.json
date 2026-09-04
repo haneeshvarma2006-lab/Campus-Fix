@@ -18,7 +18,8 @@
     "vercel-build": "npm run build -w client",
     "test": "npm test -w server",
     "check:styles": "node scripts/check-styles.mjs",
-    "migrate": "npm run migrate -w server"
+    "migrate": "npm run migrate -w server",
+    "promote": "npm run promote -w server --"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

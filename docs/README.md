@@ -36,7 +36,12 @@ Open **http://localhost:5173**
 
 | Role | Email | Password |
 |---|---|---|
-| 👨‍🎓 Student | `student.a@campus.edu` | `demo1234` |
-| 🛠️ Admin | `admin@campusfix.app` | `admin1234` |
+| 👨‍🎓 Student | `student.a@campus.edu` | 🎲 printed by `npm run seed` |
+| 🛠️ Admin | `admin@campusfix.app` | 🎲 printed by `npm run seed` |
 
-> No database to install — local dev runs Postgres inside Node.
+> 🔐 Passwords are **random every seed** and shown once — this repo never
+> contains a working login. Make your own account admin instead:
+> `npm run promote -- you@college.edu`
+
+> Needs a `DATABASE_URL` — a free Postgres from neon.tech takes a minute.
+> There is no local fallback: one database engine, everywhere.

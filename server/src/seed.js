@@ -8,6 +8,7 @@
  * Names here are deliberately generic placeholders — this is throwaway data for
  * a public repository, not anybody's real account.
  */
+import crypto from 'node:crypto'
 import 'dotenv/config'
 import { query, transaction, closeDatabase, describeDatabase } from './db.js'
 import { migrate } from './schema.js'
@@ -40,12 +41,29 @@ const LOCATIONS = [
   { name: 'Parking',        zone: 'Entrance', x: 82, y: 88 },
 ]
 
+/**
+ * Demo passwords are generated, never written down here.
+ *
+ * They used to be literals — 'admin1234' for a seeded admin — in a public
+ * repository, against a database that had been seeded in production. Anyone
+ * who could read the repo could sign in to the live site as an administrator.
+ *
+ * Now each run mints a fresh random password and prints it once. Set
+ * SEED_PASSWORD to pin one for a scripted test run; nothing else can.
+ */
+const demoPassword = () => process.env.SEED_PASSWORD || crypto.randomBytes(12).toString('base64url')
+
+const SEED_PASSWORDS = {
+  admin: demoPassword(),
+  student: demoPassword(),
+}
+
 const USERS = [
-  { name: 'Admin',     email: 'admin@campusfix.app',   password: 'admin1234', role: 'admin' },
-  { name: 'Student A', email: 'student.a@campus.edu',  password: 'demo1234',  role: 'student' },
-  { name: 'Student B', email: 'student.b@campus.edu',  password: 'demo1234',  role: 'student' },
-  { name: 'Student C', email: 'student.c@campus.edu',  password: 'demo1234',  role: 'student' },
-  { name: 'Student D', email: 'student.d@campus.edu',  password: 'demo1234',  role: 'student' },
+  { name: 'Admin',     email: 'admin@campusfix.app',   password: SEED_PASSWORDS.admin,   role: 'admin' },
+  { name: 'Student A', email: 'student.a@campus.edu',  password: SEED_PASSWORDS.student, role: 'student' },
+  { name: 'Student B', email: 'student.b@campus.edu',  password: SEED_PASSWORDS.student, role: 'student' },
+  { name: 'Student C', email: 'student.c@campus.edu',  password: SEED_PASSWORDS.student, role: 'student' },
+  { name: 'Student D', email: 'student.d@campus.edu',  password: SEED_PASSWORDS.student, role: 'student' },
 ]
 
 const REPORTS = [
@@ -227,8 +245,12 @@ async function main() {
   })
 
   console.log('\nSeeded CampusFix demo data.\n')
-  console.log('  Admin    admin@campusfix.app   /  admin1234')
-  console.log('  Student  student.a@campus.edu  /  demo1234')
+  console.log(`  Admin    admin@campusfix.app   /  ${SEED_PASSWORDS.admin}`)
+  console.log(`  Student  student.a@campus.edu  /  ${SEED_PASSWORDS.student}`)
+  console.log()
+  console.log('  These passwords are random and shown once.')
+  console.log('  To make your own account an admin instead:')
+  console.log('    npm run promote -- you@college.edu')
   console.log(`\n  ${REPORTS.length} reports, ${CATEGORIES.length} categories, ${USERS.length} users.\n`)
 }
 

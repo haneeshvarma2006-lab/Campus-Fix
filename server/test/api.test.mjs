@@ -76,9 +76,12 @@ async function run() {
   }
 
   group('Authentication')
-  const admin = await login('admin@campusfix.app', 'admin1234')
-  const student = await login('student.a@campus.edu', 'demo1234')
-  const other = await login('student.b@campus.edu', 'demo1234')
+  // Seed passwords are random per run, so the suite is told what they are.
+  // `npm test` seeds with SEED_PASSWORD set to this same value.
+  const seeded = process.env.SEED_PASSWORD || 'test-seed-password'
+  const admin = await login('admin@campusfix.app', seeded)
+  const student = await login('student.a@campus.edu', seeded)
+  const other = await login('student.b@campus.edu', seeded)
   {
     check('admin logs in', Boolean(admin))
     check('student logs in', Boolean(student))
