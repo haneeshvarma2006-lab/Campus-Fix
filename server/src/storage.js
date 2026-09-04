@@ -1,41 +1,21 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import crypto from 'node:crypto'
-import { fileURLToPath } from 'node:url'
+import path from 'node:path'
 import multer from 'multer'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-export const ROOT = path.resolve(__dirname, '..')
-export const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(ROOT, 'uploads')
-
 /**
- * Photos go to Vercel Blob when a token is present (the serverless filesystem
- * is read-only and disposable), and to a local directory otherwise so local
- * development needs no cloud account.
+ * Photo storage.
+ *
+ * One path: Vercel Blob. There is no local-disk fallback, because writing
+ * uploads next to the source produced files that existed on one machine and
+ * nowhere else — and on a serverless platform, where everything outside /tmp is
+ * read-only and every container is thrown away, they did not survive at all.
  */
+
 export const usingBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN)
 
-/**
- * Serverless filesystems are read-only apart from /tmp, so creating the upload
- * directory there would throw at import time and take the whole function down
- * on its first cold start. Local disk is only ever used off-platform.
- */
-const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME)
-
-export const localUploadsAvailable = !usingBlob && !isServerless
-
-/** Whether a photo can be stored at all. The client asks so it can hide the
-    photo step rather than offer something that cannot work. */
-export const photoStorageAvailable = usingBlob || localUploadsAvailable
-
-if (localUploadsAvailable) {
-  try {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true })
-  } catch (err) {
-    console.error('Could not create the upload directory:', err.message)
-  }
-}
+/** Whether a photo can be stored. The client asks so it can hide the photo
+    step rather than offer something that cannot work. */
+export const photoStorageAvailable = usingBlob
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic'])
 const EXT = {
@@ -46,8 +26,8 @@ const EXT = {
   'image/heic': '.heic',
 }
 
-// Memory storage either way: Blob needs the buffer, and holding an 8 MB cap in
-// memory briefly is cheaper than writing a file we may have to delete again.
+// Held in memory: Blob wants the buffer, and an 8 MB cap briefly in memory is
+// cheaper than writing a file that may have to be deleted again.
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 1 },
@@ -82,45 +62,28 @@ function filenameFor(file) {
 export async function savePhoto(file) {
   if (!file) return null
 
-  if (!usingBlob && !localUploadsAvailable) {
+  if (!usingBlob) {
     throw Object.assign(
-      new Error('Photo uploads are not configured on this deployment. Add a Blob store and set BLOB_READ_WRITE_TOKEN.'),
+      new Error('Photo uploads are not configured. Connect a Blob store and set BLOB_READ_WRITE_TOKEN.'),
       { status: 503 }
     )
   }
 
-  const name = filenameFor(file)
-
-  if (usingBlob) {
-    const { put } = await import('@vercel/blob')
-    const blob = await put(`reports/${name}`, file.buffer, {
-      access: 'public',
-      contentType: file.mimetype,
-    })
-    return blob.url
-  }
-
-  await fs.promises.writeFile(path.join(UPLOAD_DIR, name), file.buffer)
-  return `/uploads/${name}`
+  const { put } = await import('@vercel/blob')
+  const blob = await put(`reports/${filenameFor(file)}`, file.buffer, {
+    access: 'public',
+    contentType: file.mimetype,
+  })
+  return blob.url
 }
 
 /** Deletes a stored photo. Never throws — a failed cleanup must not fail a request. */
 export async function deletePhoto(photoUrl) {
-  if (!photoUrl) return
+  if (!photoUrl || !usingBlob || !photoUrl.startsWith('http')) return
 
   try {
-    if (photoUrl.startsWith('http')) {
-      if (!usingBlob) return
-      const { del } = await import('@vercel/blob')
-      await del(photoUrl)
-      return
-    }
-
-    if (!photoUrl.startsWith('/uploads/') || !localUploadsAvailable) return
-    const target = path.join(UPLOAD_DIR, path.basename(photoUrl))
-    // Guard against a crafted photo_url escaping the upload directory.
-    if (path.dirname(target) !== path.resolve(UPLOAD_DIR)) return
-    await fs.promises.rm(target, { force: true })
+    const { del } = await import('@vercel/blob')
+    await del(photoUrl)
   } catch (err) {
     console.error('Could not delete photo:', err.message)
   }

@@ -37,14 +37,24 @@ No framework to download or learn. One file, all the colours as variables, light
 
 ---
 
-## 🧪 The clever bit: local development needs no database
+## 🗄️ One database, everywhere
 
 ```
-No DATABASE_URL?  →  runs PGlite (Postgres compiled to WebAssembly)
-DATABASE_URL set? →  connects to real Postgres on Neon
+DATABASE_URL  →  managed Postgres (Neon)
 ```
 
-**Same Postgres engine either way.** Clone the repo, `npm run dev`, it just works.
+**No embedded fallback, no second code path.** What runs on your laptop is the
+same database engine, the same SQL and the same data shape as production.
+
+We used to ship PGlite — Postgres compiled to WebAssembly — so local dev needed
+no setup. It was genuinely neat, and we removed it: **25 MB of the server's
+40 MB**, downloaded and unpacked on every deploy, for an engine production never
+runs. Deploys were taking six minutes.
+
+| Before | After |
+|---|---|
+| 40 MB server install | **15 MB** |
+| Two database paths to keep in step | One |
 
 ---
 

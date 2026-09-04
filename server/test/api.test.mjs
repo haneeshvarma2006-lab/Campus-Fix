@@ -45,6 +45,9 @@ const login = async (email, password) => {
   return data.token
 }
 
+/** Set from /auth/providers once the run starts. */
+let canAttachPhotos = false
+
 /** A tiny valid PNG, so photo upload is exercised for real. */
 const pngBytes = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAHUlEQVQoU2NkYGD4z0AEYBxVSFRIYRxVSFRIAQAtxwB3xLdSbQAAAABJRU5ErkJggg==',
@@ -66,6 +69,7 @@ async function run() {
     check('advertises whether photos can be attached',
       typeof providers.data.photoUploads === 'boolean',
       `photoUploads=${providers.data.photoUploads}`)
+    canAttachPhotos = providers.data.photoUploads === true
     check('advertises whether email is configured',
       typeof providers.data.email === 'boolean',
       `email=${providers.data.email}`)
@@ -148,7 +152,15 @@ async function run() {
     created = res.data.report
     check('report created', res.status === 201 && Boolean(created?.id))
     check('gets a reference code', /^[A-Z0-9]{6}$/.test(created.code || ''), created.code)
-    check('photo stored', Boolean(created.photoUrl), String(created.photoUrl))
+    // Photo storage is optional. Configured, the photo is stored; unconfigured,
+    // the report must still be saved and say the photo could not be attached.
+    if (canAttachPhotos) {
+      check('photo stored', Boolean(created.photoUrl), String(created.photoUrl))
+    } else {
+      check('report survives an unconfigured photo store',
+        created.photoUrl === null && typeof res.data.warning === 'string',
+        `photoUrl=${created.photoUrl} warning=${res.data.warning}`)
+    }
     check('coordinates stored', created.coords?.latitude === 12.9716)
     check('priority stored', created.priority === 'high')
     check('starts at reported', created.status === 'reported')

@@ -9,7 +9,7 @@ import rateLimit from 'express-rate-limit'
 
 import { optionalAuth, asyncRoute } from './auth.js'
 import { configProblems } from './health.js'
-import { UPLOAD_DIR, usingBlob, localUploadsAvailable } from './storage.js'
+import { usingBlob } from './storage.js'
 import * as mail from './mail.js'
 import { describeDatabase } from './db.js'
 import authRoutes from './routes/auth.js'
@@ -55,16 +55,10 @@ export function createApp() {
 
   app.use(asyncRoute(optionalAuth))
 
-  // Locally stored photos. Filenames are unique and immutable, so cache hard.
-  if (localUploadsAvailable) {
-    app.use('/uploads', express.static(UPLOAD_DIR, {
-      maxAge: '30d',
-      setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
-    }))
-    // A photo that no longer exists must 404 rather than falling through to
-    // the SPA catch-all below, which would answer an <img> with a page of HTML.
-    app.use('/uploads', (_req, res) => res.status(404).json({ error: 'No such file.' }))
-  }
+  // Photos live in Blob and are served from its own domain, but reports
+  // created before that answer /uploads/… — 404 those rather than letting them
+  // fall through to the SPA catch-all, which would answer an <img> with HTML.
+  app.use('/uploads', (_req, res) => res.status(404).json({ error: 'No such file.' }))
 
   // Health has to answer even when the app is misconfigured — it is the only
   // thing that can explain why nothing else works.
@@ -73,7 +67,7 @@ export function createApp() {
     res.status(problems.length ? 503 : 200).json({
       ok: problems.length === 0,
       database: describeDatabase(),
-      storage: usingBlob ? 'Vercel Blob' : localUploadsAvailable ? 'local disk' : 'not configured',
+      storage: usingBlob ? 'Vercel Blob' : 'not configured',
       email: mail.isConfigured ? 'Resend' : 'not configured',
       problems,
       uptime: process.uptime(),

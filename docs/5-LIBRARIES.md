@@ -3,10 +3,14 @@
 > Every package actually installed, with the version that is actually running.
 > Nothing invented.
 
-**19 packages chosen by hand:** 3 frontend, 13 backend, 3 build tools.
+**18 packages chosen by hand:** 3 frontend, 12 backend, 3 build tools.
 
-Those 19 pull in everything they need, which lands at **165 folders** on disk —
-but only the 3 frontend ones ever reach a student's phone.
+Only the 3 frontend ones ever reach a student's phone.
+
+> 🗑️ **Was 19.** We dropped PGlite — Postgres compiled to WebAssembly, used only
+> so local dev needed no database. It was **25 MB of the server's 40 MB**,
+> installed on every deploy for an engine production never runs. Server install
+> is now **15 MB**.
 
 ---
 
@@ -30,14 +34,13 @@ but only the 3 frontend ones ever reach a student's phone.
 
 ---
 
-## ⚙️ Backend — 13 packages
+## ⚙️ Backend — 12 packages
 
 ### 🗄️ Database
 
 | Library | Version | What it does |
 |---|---|---|
-| **pg** | 8.23.0 | Talks to Postgres in production |
-| **@electric-sql/pglite** | 0.5.8 | Postgres-in-WebAssembly, so local dev needs **no database install** |
+| **pg** | 8.23.0 | Talks to Postgres — the only database path there is |
 
 ### 🔐 Security
 

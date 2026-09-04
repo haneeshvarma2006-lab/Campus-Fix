@@ -2,7 +2,6 @@ node_modules/
 dist/
 
 # Embedded Postgres data directory (local development)
-server/.pgdata/
 server/data/
 
 # Vercel

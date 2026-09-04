@@ -27,9 +27,12 @@ npm run dev
 
 Open **http://localhost:5173**.
 
-No database to install. With no `DATABASE_URL` set, the server runs **PGlite** —
-the real Postgres engine compiled to WebAssembly — storing data in
-`server/.pgdata`. Production points at a normal Postgres; the SQL is identical.
+You need a Postgres connection string first. A free one takes a minute at
+[neon.tech](https://neon.tech) — copy its **Connection string (URI)** into
+`server/.env` as `DATABASE_URL`, then `npm run migrate` and `npm run seed`.
+
+There is deliberately no embedded fallback. One database engine, one code path,
+and what you run locally is what runs live.
 
 ### Demo accounts
 
@@ -190,8 +193,8 @@ it. Leave the build settings alone — `vercel.json` already declares them.
 | `NODE_ENV` | `production` |
 
 **4. File storage.** Project → **Storage → Create → Blob**. Connecting it injects
-`BLOB_READ_WRITE_TOKEN` automatically, and photos start going to Blob instead of
-local disk. Without it, uploads still work locally but won't persist on Vercel.
+`BLOB_READ_WRITE_TOKEN` automatically. Without it the app hides the photo step
+and reports save normally — everything else works.
 
 **5. Deploy.** The schema migrates itself on first boot. Register the first
 account — it becomes the admin.
@@ -232,12 +235,12 @@ campusfix-web/
 │   └── src/
 │       ├── app.js          Express app (no listener, so it runs both ways)
 │       ├── index.js        Local dev server
-│       ├── db.js           Postgres — node-postgres or PGlite
+│       ├── db.js           Postgres over node-postgres
 │       ├── schema.js       Idempotent migrations
 │       ├── domain.js       Statuses, roles, priorities — defined once
 │       ├── auth.js         Hashing, JWT, role middleware
 │       ├── google.js       Google OAuth 2.0 flow
-│       ├── storage.js      Vercel Blob or local disk
+│       ├── storage.js      Vercel Blob
 │       ├── validate.js     zod schema per request body
 │       ├── seed.js         Demo data
 │       ├── routes/         auth · reports · categories · users · stats
@@ -297,8 +300,9 @@ only to override.
 | --- | --- | --- |
 | `PORT` | `4000` | API port |
 | `JWT_SECRET` | generated | **Required in production** — the server refuses to start without it |
-| `DATABASE_URL` | *(unset)* | Empty runs PGlite locally. Set to a Postgres URL in production |
-| `BLOB_READ_WRITE_TOKEN` | *(unset)* | Empty writes photos to `server/uploads` |
+| `DATABASE_URL` | *(none)* | **Required.** Postgres connection string — there is no local fallback |
+| `BLOB_READ_WRITE_TOKEN` | *(unset)* | Photo uploads stay hidden until set |
+| `RESEND_API_KEY` / `MAIL_FROM` | *(unset)* | Status-change emails stay off until both are set |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | *(unset)* | Google sign-in stays hidden until both are set |
 | `APP_ORIGIN` | request origin | Where to return after Google sign-in |
 | `CORS_ORIGIN` | reflects request | Pin to your domain in production |
