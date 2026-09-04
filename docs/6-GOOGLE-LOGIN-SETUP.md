@@ -40,16 +40,20 @@ Search for **"Credentials"** → **+ Create Credentials** → **OAuth client ID*
 **Authorised JavaScript origins** — add both:
 ```
 http://localhost:5173
-https://YOUR-APP.vercel.app
+https://campus-fix-theta.vercel.app
 ```
 
 **Authorised redirect URIs** — add both:
 ```
 http://localhost:4000/api/auth/google/callback
-https://YOUR-APP.vercel.app/api/auth/google/callback
+https://campus-fix-theta.vercel.app/api/auth/google/callback
 ```
 
 ⚠️ These must match **exactly** — no trailing slash. This is what trips people up.
+
+> 💡 **Why port 4000 for local?** The Vite dev server proxies `/api` to Express
+> with `changeOrigin`, so Express sees `localhost:4000` and builds the callback
+> from that. Use 4000, not 5173.
 
 Click **Create**. Google shows you a **Client ID** and a **Client secret**.
 
@@ -77,7 +81,7 @@ Vercel → your project → **Settings** → **Environment Variables**
 |---|---|
 | `GOOGLE_CLIENT_ID` | your client ID |
 | `GOOGLE_CLIENT_SECRET` | your secret |
-| `APP_ORIGIN` | `https://YOUR-APP.vercel.app` |
+| `APP_ORIGIN` | `https://campus-fix-theta.vercel.app` |
 
 Then **redeploy** — variables only apply to new deployments.
 
@@ -113,3 +117,4 @@ Open `/api/auth/providers`:
 | `Access blocked` | Add your Gmail under **Test users**. |
 | Button doesn't appear | `/api/auth/providers` says `false` — check the names are spelled right. |
 | Works local, fails live | You forgot to **redeploy** after adding the variables. |
+| Works on the main URL, fails on a preview | Every Vercel preview gets its own domain, and Google only knows the ones you registered. Pin it: set `GOOGLE_REDIRECT_URI=https://campus-fix-theta.vercel.app/api/auth/google/callback` so every deployment uses the same one. |
