@@ -12,7 +12,7 @@ import { useToast, Icon, Spinner } from '../components/ui'
  * step, and the answers survive going back.
  */
 
-const STEPS = ['What', 'Where', 'Details', 'Photo']
+const BASE_STEPS = ['What', 'Where', 'Details']
 
 export function SubmitReport() {
   const navigate = useNavigate()
@@ -23,6 +23,7 @@ export function SubmitReport() {
   const [categories, setCategories] = useState([])
   const [locations, setLocations] = useState([])
   const [loadingOptions, setLoadingOptions] = useState(true)
+  const [photoUploads, setPhotoUploads] = useState(true)
 
   const [category, setCategory] = useState('')
   const [location, setLocation] = useState('')
@@ -40,10 +41,13 @@ export function SubmitReport() {
     Promise.all([
       api.listCategories(c.signal).then((d) => d.categories),
       api.listLocations(c.signal).then((d) => d.locations),
+      // If this deployment has no photo store, don't offer a step that cannot work.
+      api.providers(c.signal).then((d) => d.photoUploads !== false).catch(() => true),
     ])
-      .then(([cats, locs]) => {
+      .then(([cats, locs, canAttach]) => {
         setCategories(cats.length ? cats : [{ id: 0, name: 'Other' }])
         setLocations(locs)
+        setPhotoUploads(canAttach)
       })
       .catch((err) => {
         if (err.name !== 'AbortError') toastError('Could not load the options. Pull down to retry.')
@@ -98,8 +102,10 @@ export function SubmitReport() {
       form.append('priority', urgent ? 'urgent' : 'normal')
       if (photo) form.append('photo', photo)
 
-      const { report } = await api.createReport(form)
-      notify(`Reported. Your reference is #${report.code}.`)
+      const { report, warning } = await api.createReport(form)
+      notify(warning
+        ? `${warning} Your reference is #${report.code}.`
+        : `Reported. Your reference is #${report.code}.`)
       navigate(`/reports/${report.id}`, { replace: true })
     } catch (err) {
       setError(err.message)
@@ -108,6 +114,7 @@ export function SubmitReport() {
   }
 
   const zones = [...new Set(locations.map((l) => l.zone))]
+  const steps = photoUploads ? [...BASE_STEPS, 'Photo'] : BASE_STEPS
 
   return (
     <div className="wrap-s page">
@@ -117,13 +124,13 @@ export function SubmitReport() {
           onClick={() => (step === 0 ? navigate(-1) : go(step - 1))}
           style={{ marginLeft: -10 }}
         >
-          <Icon.Back /> {step === 0 ? 'Back' : STEPS[step - 1]}
+          <Icon.Back /> {step === 0 ? 'Back' : steps[step - 1]}
         </button>
-        <span className="t-xs faint">Step {step + 1} of {STEPS.length}</span>
+        <span className="t-xs faint">Step {step + 1} of {steps.length}</span>
       </div>
 
       <div className="steps" aria-hidden="true">
-        {STEPS.map((label, i) => (
+        {steps.map((label, i) => (
           <div key={label} className={`step-bar ${i < step ? 'done' : ''} ${i === step ? 'now' : ''}`}>
             <span />
           </div>
@@ -252,10 +259,12 @@ export function SubmitReport() {
 
           <button
             className="btn btn-lg btn-block"
-            disabled={title.trim().length < 5 || description.trim().length < 10}
-            onClick={() => go(3)}
+            disabled={busy || title.trim().length < 5 || description.trim().length < 10}
+            onClick={() => (photoUploads ? go(3) : submit())}
           >
-            Continue <Icon.Next />
+            {photoUploads
+              ? <>Continue <Icon.Next /></>
+              : (busy ? <><Spinner /> Sending…</> : <>Submit report <Icon.Check /></>)}
           </button>
         </div>
       )}

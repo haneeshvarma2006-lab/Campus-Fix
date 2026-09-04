@@ -6,6 +6,7 @@ import {
 } from '../auth.js'
 import { validate, signupSchema, loginSchema } from '../validate.js'
 import * as google from '../google.js'
+import { photoStorageAvailable } from '../storage.js'
 
 const router = Router()
 
@@ -78,9 +79,9 @@ router.get('/me', requireAuth, (req, res) => {
 
 // --- Google sign-in ---------------------------------------------------------
 
-/** Lets the frontend show or hide the Google button without guessing. */
+/** Lets the frontend show or hide optional features without guessing. */
 router.get('/providers', (_req, res) => {
-  res.json({ google: google.isConfigured })
+  res.json({ google: google.isConfigured, photoUploads: photoStorageAvailable })
 })
 
 router.get('/google', asyncRoute(async (req, res) => {

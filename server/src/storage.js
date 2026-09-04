@@ -25,6 +25,10 @@ const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTI
 
 export const localUploadsAvailable = !usingBlob && !isServerless
 
+/** Whether a photo can be stored at all. The client asks so it can hide the
+    photo step rather than offer something that cannot work. */
+export const photoStorageAvailable = usingBlob || localUploadsAvailable
+
 if (localUploadsAvailable) {
   try {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true })

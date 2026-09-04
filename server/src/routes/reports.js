@@ -161,7 +161,18 @@ router.get('/', requireAuth, validate(listQuerySchema, 'query'), asyncRoute(asyn
 router.post('/', requireAuth, photoUpload, validate(reportSchema), asyncRoute(async (req, res) => {
   const { title, description, category, location, latitude, longitude, priority } = req.body
 
-  const photoUrl = await savePhoto(req.file)
+  // A photo store that is missing or broken must cost the student the photo,
+  // never the report they just spent a minute writing.
+  let photoUrl = null
+  let warning = null
+  try {
+    photoUrl = await savePhoto(req.file)
+  } catch (err) {
+    if (!req.file) throw err
+    console.error('Could not store the photo:', err.message)
+    warning = 'Your report was saved, but the photo could not be attached.'
+  }
+
   const code = await generateCode()
 
   const id = await transaction(async (client) => {
@@ -177,7 +188,9 @@ router.post('/', requireAuth, photoUpload, validate(reportSchema), asyncRoute(as
     return row.id
   })
 
-  res.status(201).json({ report: toReport(await getReport(id, req.user.id)) })
+  const body = { report: toReport(await getReport(id, req.user.id)) }
+  if (warning) body.warning = warning
+  res.status(201).json(body)
 }))
 
 // --- detail -----------------------------------------------------------------

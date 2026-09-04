@@ -63,6 +63,9 @@ async function run() {
     const providers = await api('/auth/providers')
     check('advertises auth providers', typeof providers.data.google === 'boolean',
       `google=${providers.data.google}`)
+    check('advertises whether photos can be attached',
+      typeof providers.data.photoUploads === 'boolean',
+      `photoUploads=${providers.data.photoUploads}`)
   }
 
   group('Authentication')
